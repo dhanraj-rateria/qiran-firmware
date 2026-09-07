@@ -3,6 +3,8 @@
 #include "qiran/exec/exec_core.h"
 #include "qiran/plat/plat_cpu.h"
 #include "qiran/plat/plat_gic.h"
+#include "qiran/plat/plat_irq.h"
+#include "qiran/plat/plat_isr_uart.h"
 #include "qiran/plat/plat_timer.h"
 #include "qiran/svc/svc_time.h"
 
@@ -13,6 +15,14 @@ qiran_status_t plat_early_init(void)
     plat_cpu_init();
 
     st = plat_gic_init();
+    if (st != QIRAN_OK) {
+        return st;
+    }
+
+    plat_irq_init();
+
+    /* Receive ring is valid before any device is attached to it. */
+    st = plat_isr_uart_init(NULL);
     if (st != QIRAN_OK) {
         return st;
     }

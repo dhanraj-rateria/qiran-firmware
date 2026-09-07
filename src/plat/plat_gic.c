@@ -87,4 +87,29 @@ void *plat_gic_instance(void)
     return s_ready ? (void *)&s_gic : NULL;
 }
 
+#else /* host build: the framework above is exercised without a controller */
+
+qiran_status_t plat_gic_init(void)
+{
+    return QIRAN_OK;
+}
+
+qiran_status_t plat_gic_connect(uint32_t irq_id,
+                                plat_gic_handler_t handler,
+                                void *ref,
+                                uint8_t priority,
+                                uint8_t trigger)
+{
+    QIRAN_UNUSED(irq_id);
+    QIRAN_UNUSED(ref);
+    QIRAN_UNUSED(priority);
+    QIRAN_UNUSED(trigger);
+    return (handler == NULL) ? QIRAN_ERR_PARAM : QIRAN_OK;
+}
+
+void plat_gic_enable(uint32_t irq_id) { QIRAN_UNUSED(irq_id); }
+void plat_gic_disable(uint32_t irq_id) { QIRAN_UNUSED(irq_id); }
+void plat_gic_start(void) { }
+void *plat_gic_instance(void) { return NULL; }
+
 #endif

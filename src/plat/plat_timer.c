@@ -3,6 +3,7 @@
 #if defined(__arm__)
 
 #include "qiran/exec/exec_core.h"
+#include "qiran/plat/plat_cpu.h"
 #include "qiran/plat/plat_gic.h"
 #include "qiran/qiran_config.h"
 
@@ -35,10 +36,22 @@ QIRAN_STATIC_ASSERT((((uint64_t)QIRAN_TIMER_CLK_HZ *
 
 static XScuTimer s_timer;
 
+static volatile uint32_t s_isr_cycles_last;
+static volatile uint32_t s_isr_cycles_worst;
+
 static void timer_isr(void *ref)
 {
+    uint32_t start = plat_cpu_cycle_count();
+    uint32_t elapsed;
+
     XScuTimer_ClearInterruptStatus((XScuTimer *)ref);
     exec_on_minor_tick();
+
+    elapsed = plat_cpu_cycle_count() - start;
+    s_isr_cycles_last = elapsed;
+    if (elapsed > s_isr_cycles_worst) {
+        s_isr_cycles_worst = elapsed;
+    }
 }
 
 qiran_status_t plat_timer_init(void)
@@ -93,6 +106,16 @@ uint32_t plat_timer_load_value(void)
 uint32_t plat_timer_clock_hz(void)
 {
     return (uint32_t)QIRAN_TIMER_CLK_HZ;
+}
+
+void plat_timer_isr_cycles(uint32_t *last, uint32_t *worst)
+{
+    if (last != NULL) {
+        *last = s_isr_cycles_last;
+    }
+    if (worst != NULL) {
+        *worst = s_isr_cycles_worst;
+    }
 }
 
 #endif

@@ -48,6 +48,26 @@ QIRAN_STATIC_ASSERT(
  */
 #define QIRAN_LINK_BUDGET_MS        QIRAN_DEVINIT_BUDGET_MS
 
+/* --- Interrupt framework --- */
+
+/*
+ * Events buffered per interrupt source between the interrupt and the loop that
+ * consumes them. Must be a power of two. One minor cycle's worth is the design
+ * intent; overflow is counted per source rather than assumed impossible, so the
+ * depth can be raised against measured evidence instead of guesswork.
+ */
+#define QIRAN_IRQ_QUEUE_DEPTH   8U
+
+QIRAN_STATIC_ASSERT((QIRAN_IRQ_QUEUE_DEPTH & (QIRAN_IRQ_QUEUE_DEPTH - 1U)) == 0U,
+                    irq_queue_depth_is_power_of_two);
+
+/* Receive bytes buffered by the serial interrupt ahead of frame parsing. */
+#define QIRAN_UART_RX_RING_BYTES 256U
+
+QIRAN_STATIC_ASSERT((QIRAN_UART_RX_RING_BYTES &
+                     (QIRAN_UART_RX_RING_BYTES - 1U)) == 0U,
+                    uart_rx_ring_is_power_of_two);
+
 /* --- Global fault-management limits --- */
 
 #define QIRAN_STAGE_RETRY_LIMIT     3U

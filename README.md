@@ -46,6 +46,11 @@ Expected UART output, one line per major cycle:
 
     boot=0 timer_clk=333333343Hz load=6666665 budget=20000us
     t=25 maj=1 body=<n>us peak=<n>us budget=20000us ovr=0 lost=0 wdt=0
+      isr timer=<n>c
+
+The second line reports measured handler durations in CPU cycles. Only the tick
+appears until a device supplies an acknowledge hook for the other sources; each
+one then adds `name=taken/dropped/worst`.
 
 Check, in order:
 

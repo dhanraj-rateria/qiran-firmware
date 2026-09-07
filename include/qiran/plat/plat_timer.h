@@ -13,4 +13,7 @@ void plat_timer_stop(void);
 uint32_t plat_timer_load_value(void);
 uint32_t plat_timer_clock_hz(void);
 
+/* Measured duration of the tick handler, in CPU cycles. */
+void plat_timer_isr_cycles(uint32_t *last, uint32_t *worst);
+
 #endif

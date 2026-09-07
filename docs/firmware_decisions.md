@@ -104,6 +104,79 @@ open item is a backend registration, not a change to the gate.
 
 ---
 
+## FW-07 — One reviewed handler body, not five hand-written ones
+
+**Reference material:** "Implement each ISR from Section 7.3's table as its own
+module, GIC-registered."
+
+**Decision:** five of the six sources share one handler body in `plat_irq.c`.
+Each source keeps its own event queue, statistics and acknowledge hook, but the
+sequence acknowledge, timestamp, publish, return is written once.
+
+**Justification.** The interrupt-context rules are a property that has to hold
+for *every* handler. Written five times, compliance is five separate review
+findings that can each regress independently. Written once, it is structural:
+there is no per-source code in which a blocking call or a floating-point
+operation could appear. The handler also has no loop, so bounded execution is by
+inspection rather than by argument. Per-source duration measurement, queue
+overflow counting and sequence-gap detection come out of the same single
+implementation instead of being reimplemented or, more likely, omitted.
+
+The interrupt set stays closed: `PLAT_IRQ_COUNT` is asserted equal to six at
+compile time, so a seventh source cannot be added without breaking the build.
+Relative priority is chosen by the framework from the source identity rather
+than passed in at the call site, so the ordering cannot be set inconsistently.
+
+**Cost.** One indirect call per interrupt, and the interrupt-context rules become
+a contract on the acknowledge hooks rather than on code this task owns. That
+contract is written down in `docs/isr_review.md` and requires per-hook sign-off.
+
+---
+
+## FW-08 — Frame assembly is not done in interrupt context
+
+**Reference material:** the serial receive interrupt should "store byte in ring
+buffer, set flag on complete frame."
+
+**Problem:** detecting a complete frame requires knowing the frame format. The
+command frame format is not yet defined. Worse, content-driven parsing makes
+handler duration a function of what arrives, which is exactly the property that
+makes an interrupt's worst case hard to bound and hard to defend.
+
+**Decision:** the interrupt pushes bytes into a ring and publishes a
+content-independent inter-frame idle gap as an event, using the device's receive
+timeout condition. The communication layer assembles frames from the ring in the
+cyclic loop, where an unbounded parse costs loop budget that is already measured
+rather than interrupt latency that is not.
+
+**Consequence:** framing works out to be independent of the eventual frame
+format, so fixing the format later does not touch interrupt code.
+
+---
+
+## Additions not named in the module architecture
+
+These modules are not in the layer table and were added as implementation
+necessities. Recorded so the table can be updated at the next revision.
+
+| Module | Layer | Why |
+|---|---|---|
+`plat_cpu.c` | 1 | Cycle counter, barriers, critical sections. Also the seam that makes upper layers host-testable. |
+`plat_irq.c` | 1 | The interrupt framework. See FW-07. |
+`plat_isr_uart.c` | 1 | Receive ring ownership. See FW-08. |
+`svc_ring.c` | 3 | Single-producer single-consumer ring, shared by the interrupt paths. |
+`svc_health.c` | 3 | Aggregate health verdict the watchdog gate reads. |
+`svc_watchdog.c` | 3 | The watchdog gate. See FW-06. |
+`exec_major.c` | 2 | The major-cycle task list. |
+`photonic_sched.c` | 5 | The calling framework for stage modules owned by others. |
+`comm_process.c` | 9 | Communication entry point called from the loop. |
+`data_path.c` | 10 | Data-path entry point called from the loop. |
+
+`photonic_crow1/2` and `photonic_dli1/2` are taken as two files each, matching
+the two physical banks and the two receiver channels.
+
+---
+
 ## Open items carried in code
 
 Every provisional value is tagged `OPEN:` in `include/qiran/qiran_config.h`.
