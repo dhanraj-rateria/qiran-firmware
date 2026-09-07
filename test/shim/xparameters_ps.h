@@ -1,0 +1,4 @@
+#ifndef SHIM_XPARAMETERS_PS_H
+#define SHIM_XPARAMETERS_PS_H
+#define XPS_SCU_TMR_INT_ID 29U
+#endif
