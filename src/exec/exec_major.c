@@ -5,6 +5,10 @@
 #include "qiran/comm/comm_output.h"
 #include "qiran/comm/comm_spw_link.h"
 #include "qiran/comm/comm_rs485_hk.h"
+#include "qiran/data/data_path.h"
+#include "qiran/data/data_product.h"
+#include "qiran/data/storage_ddr.h"
+#include "qiran/data/storage_nand.h"
 #include "qiran/exec/exec_core.h"
 #include "qiran/exec/exec_sched.h"
 #include "qiran/mission/mission_ops_seq.h"
@@ -160,6 +164,21 @@ void major_cycle_tasks(void)
                (unsigned long)comm_output_rejected(),
                (unsigned long)comm_ccsds_sequence_gaps(),
                (unsigned long)comm_ccsds_integrity_errors());
+    xil_printf("  data dma=%lu ready=%lu armfail=%lu drop=%lu own_err=%lu\r\n",
+               (unsigned long)data_path_completions(),
+               (unsigned long)data_path_ready_slots(),
+               (unsigned long)data_path_arm_failures(),
+               (unsigned long)data_path_dropped(),
+               (unsigned long)storage_ddr_violations());
+    xil_printf("  store used=%lu recs=%lu sent=%lu wfail=%lu rfail=%lu "
+               "prod=%lu bad=%lu\r\n",
+               (unsigned long)storage_nand_used(),
+               (unsigned long)storage_nand_records(),
+               (unsigned long)storage_nand_transferred(),
+               (unsigned long)storage_nand_write_failures(),
+               (unsigned long)storage_nand_read_failures(),
+               (unsigned long)data_product_computed(),
+               (unsigned long)data_product_inconsistent());
     xil_printf("  cfg locked=%d changes=%lu rejected=%lu corrected=%lu cal=%d\r\n",
                (int)svc_config_locked(),
                (unsigned long)svc_config_changes(),

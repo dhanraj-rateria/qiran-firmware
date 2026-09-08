@@ -72,7 +72,9 @@ static const svc_fdir_policy_t k_policy[QIRAN_FAULT_COUNT] = {
     /* COMMAND_FAILED          */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       3U },
 
     /* DDR_OVERRUN             */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       3U },
-    /* NAND_WRITE              */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       3U }
+    /* NAND_WRITE              */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       3U },
+    /* BUFFER_OWNERSHIP        */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       3U },
+    /* DATA_PRODUCT            */ { QIRAN_SEV_MEDIUM,   QIRAN_ESCALATE_LOG_ONLY,     0U }
 };
 
 QIRAN_STATIC_ASSERT(QIRAN_ARRAY_LEN(k_policy) == (size_t)QIRAN_FAULT_COUNT,

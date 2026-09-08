@@ -750,6 +750,98 @@ the one that mattered would be whichever link was used in anger.
 
 ---
 
+## FW-44 — Buffer ownership is stated on every access, not tracked centrally
+
+Every read, write, handoff and release of an external memory region names the
+owner the caller believes holds it, and fails if that is not who holds it.
+
+The buffer management rule is explicit that ownership must never be inferred
+from timing. Enforcing it only at handoff would leave the far more common
+mistake untouched: reading a buffer the fabric is still filling, which produces
+plausible-looking data rather than an error. Naming the owner on every access
+turns that into a refused call and a reported fault.
+
+The cost is one comparison per access. What it buys is that the race between the
+fabric writing and the processor reading cannot corrupt a product silently, and
+a handoff performed twice or out of order is found where it happens rather than
+in the numbers it produced.
+
+A region cannot be given a new base or size while anybody owns it, which would
+otherwise move memory out from under its owner.
+
+---
+
+## FW-45 — The completed buffer is named by the interrupt, not deduced
+
+The completion event carries which buffer finished, and that is what is handed
+over. Nothing works out from ordering which acquisition must have been the one
+that completed.
+
+With two channels of two slots each, and completions arriving as interrupts,
+deducing it would be exactly the timing inference the buffer rule forbids. A
+completion naming a buffer the fabric did not own is refused and reported, which
+is what catches a mis-wired index rather than letting it hand over the wrong
+memory.
+
+---
+
+## FW-46 — Floating point in the products, integers everywhere else
+
+The configuration store is integer throughout, and the derived quantities are
+computed in double precision. That is not an inconsistency.
+
+Configuration values are physical setpoints that are integral at the precision
+the requirements state, where exact comparison matters and rounding must not
+creep in. The derived quantities are ratios of ratios spanning several orders of
+magnitude, where fixed point would need a different scale at every step and each
+one would be somewhere to get it wrong.
+
+Neither runs in interrupt context, so the rule keeping floating point out of
+there is untouched. What goes on the wire is scaled integers, so the transmitted
+form does not depend on how the processor represents a double.
+
+Scaling rounds rather than truncates. Truncation would bias every telemetered
+figure downward by up to one unit of its scale, which a test caught: a pair rate
+whose exact value is four hundred and fifty thousand computes as very slightly
+under it and would have been sent as one less.
+
+---
+
+## FW-47 — A product that cannot be computed is not reported as zero
+
+No counts, or no interval to have counted over, returns an error rather than a
+product full of zeros. A visibility of zero is a measurement, and recording one
+that was never made would put it in the run's results as though it had been.
+
+Quantities that need ground calibration are separated from those that do not.
+Without calibration the visibility and the correlation bound still stand, since
+they come from the counts alone; the pair rate and brightness are left unclaimed
+and flagged as such. Discarding the whole product for want of a calibration
+table would throw away the run's primary results.
+
+The bound that rises without limit as visibility approaches unity is only
+claimed below it, and the consistency check it exists for is not asserted where
+it cannot be made.
+
+---
+
+## FW-48 — Damaged storage costs the records it damaged
+
+Each stored record carries its own header and checksum. A record that no longer
+matches its checksum is reported and passed over, and the ones after it still
+go out.
+
+A single checksum over the whole store would lose a run to one degraded page.
+A header that does not describe a record is different and does stop the
+transfer: reading on from a length taken out of damaged memory would wander
+through the store rather than recover from it.
+
+The store refuses to be cleared while anything it holds is still unsent, so a
+transfer that stopped early cannot be followed by an erase that destroys what
+had not gone.
+
+---
+
 ## Additions not named in the module architecture
 
 These modules are not in the layer table and were added as implementation

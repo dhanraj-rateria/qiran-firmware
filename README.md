@@ -63,6 +63,13 @@ against `budget`, and `fits=0` is a design problem to act on before writing more
 code. `complete=1` means every task due every cycle has run, so the figures are
 real. A full task table follows every twentieth major cycle. See `docs/wcet.md`.
 
+The data line reports acquisitions completed, buffers waiting to be reduced,
+arming failures, dropped completions and ownership violations. `own_err` above
+zero is a software fault, not a hardware one: something accessed a buffer it did
+not hold. The store line reports bytes and records held, records sent, device
+failures either way, and products computed against those failing their
+consistency check.
+
 The serial link line reports its bring-up state, error and disconnect counts,
 packets each way, and the current status word. `down` with rising attempts means
 the fabric side is not coming up; `failed` means the attempts were spent. The

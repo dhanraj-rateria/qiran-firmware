@@ -1,6 +1,9 @@
 #include "qiran/comm/comm_process.h"
 #include "qiran/comm/comm_rs485_hk.h"
 #include "qiran/data/data_path.h"
+#include "qiran/data/data_product.h"
+#include "qiran/data/storage_ddr.h"
+#include "qiran/data/storage_nand.h"
 #include "qiran/exec/exec_core.h"
 #include "qiran/exec/exec_major.h"
 #include "qiran/exec/exec_sched.h"
@@ -36,6 +39,9 @@ static void application_init(void)
     mission_state_init();
     mission_ops_init();
     photonic_sched_init();
+    storage_ddr_init();
+    storage_nand_init();
+    data_product_init();
     data_path_init();
     comm_process_init();
 
