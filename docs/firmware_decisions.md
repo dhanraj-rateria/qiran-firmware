@@ -220,6 +220,68 @@ this payload condition". They stay separate.
 
 ---
 
+## FW-13 — Boot retries the failed step in place, not by resetting the processor
+
+**Requirement:** on failure of boot, self test or device initialisation, issue a
+reset request and re-attempt the failed step, with no more than three reset
+requests before requesting a power cycle.
+
+**The ambiguity.** "Issue a reset request and re-attempt the failed step" reads
+two ways. If the request is a processor reset, execution restarts and the whole
+sequence repeats, which is not really re-attempting one step. If it is a reset
+of the failing subsystem, the step is genuinely re-attempted in place.
+
+**Decision: in place.** Three processor resets would repeat the entire sequence
+each time, costing up to three times the full boot budget. The mission timing
+model allocates no time for that, and it would eat most of the retry margin
+before the first stage has run. Retrying only the failed step costs only that
+step.
+
+**OPEN for systems engineering.** The attempt count and the escalation are
+identical under either reading; only where execution resumes differs. If the
+processor-reset reading is intended, the count has to survive a warm reset,
+which needs a persistent register whose bit allocation must be agreed with
+whoever owns the boot image.
+
+---
+
+## FW-14 — Boot retry counters are the same Critical counters
+
+The boot-step fault classes carry the reset-request limit as their Critical-tier
+limit, exactly as the lock-acquisition classes carry the stage retry limit. So
+the boot sequencer holds no counter of its own: it reports the fault, and
+reaching the limit is what requests the power cycle.
+
+Boot calls the fault service directly after reporting, because the cyclic loop
+that would normally service it is not yet running.
+
+**Correction to the earlier policy.** The boot classes were initially Severe with
+no tolerance, which would have escalated on the first failure and allowed no
+retries at all. They are Critical with a limit of three.
+
+A step whose class has no tolerance is escalated once and **not** retried. Without
+that check the sequencer would repeat such a step for ever, since a limit of zero
+can never be reached.
+
+---
+
+## FW-15 — No safe-output actions registered is a failure, not a pass
+
+Safe outputs are applied by actions registered by whoever owns the drive path,
+because this module must not know how to reach a converter. That leaves the case
+of nothing registered, and treating it as success would mean a boot that reports
+the actuators safe without having touched one.
+
+It returns a failure instead. On a bench with no drive paths yet implemented,
+boot therefore ends terminal and says so, which is the truthful answer. The
+cyclic loop still runs, so executive bring-up is unaffected.
+
+Registration has to happen before boot, which means safe-output actions must
+reach their outputs without depending on device initialisation: they belong to
+whoever owns the raw output lines, not to the device abstraction layer.
+
+---
+
 ## Additions not named in the module architecture
 
 These modules are not in the layer table and were added as implementation
@@ -262,6 +324,10 @@ error flag to the observer. The error-handling reconciliation says that flag
 power-reset request. Read strictly, one stubborn stage then costs a full reset
 cycle out of the operating window. The policy table currently reports a flag
 without requesting a reset. Confirm which is intended.
+
+**Is a boot reset request a processor reset, or a reset of the failing
+subsystem?** See FW-13. This one has a schedule consequence, not just a design
+one, so it is worth closing early.
 
 **Is the Critical threshold counted in occurrences or in execution cycles?**
 The severity table says both in different sentences. Occurrences is implemented,

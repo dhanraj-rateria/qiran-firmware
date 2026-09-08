@@ -2,6 +2,7 @@
 
 #if defined(__arm__)
 
+#include "xil_cache.h"
 #include "xparameters.h"
 
 #define CPU_CLK_HZ ((uint32_t)XPAR_CPU_CORTEXA9_0_CPU_CLK_FREQ_HZ)
@@ -68,6 +69,16 @@ void plat_cpu_memory_barrier(void)
     __asm__ volatile("dmb" ::: "memory");
 }
 
+void plat_cpu_dcache_flush_range(volatile void *addr, uint32_t len)
+{
+    Xil_DCacheFlushRange((INTPTR)addr, len);
+}
+
+void plat_cpu_dcache_invalidate_range(volatile void *addr, uint32_t len)
+{
+    Xil_DCacheInvalidateRange((INTPTR)addr, len);
+}
+
 #else /* host build: portable stubs for logic-level testing */
 
 #include <time.h>
@@ -105,6 +116,18 @@ void plat_cpu_irq_restore(uint32_t prior)
 void plat_cpu_memory_barrier(void)
 {
     __atomic_thread_fence(__ATOMIC_SEQ_CST);
+}
+
+void plat_cpu_dcache_flush_range(volatile void *addr, uint32_t len)
+{
+    QIRAN_UNUSED(addr);
+    QIRAN_UNUSED(len);
+}
+
+void plat_cpu_dcache_invalidate_range(volatile void *addr, uint32_t len)
+{
+    QIRAN_UNUSED(addr);
+    QIRAN_UNUSED(len);
 }
 
 #endif

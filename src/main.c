@@ -5,6 +5,9 @@
 #include "qiran/mission/mission_state.h"
 #include "qiran/photonic/photonic_sched.h"
 #include "qiran/plat/plat_boot.h"
+#include "qiran/plat/plat_safe_outputs.h"
+#include "qiran/plat/plat_devinit.h"
+#include "qiran/plat/plat_post.h"
 #include "qiran/plat/plat_timer.h"
 #include "qiran/qiran_config.h"
 #include "qiran/svc/svc_fdir.h"
@@ -21,6 +24,8 @@ static void application_init(void)
 {
     svc_log_init();
     svc_fdir_init();
+    plat_post_init();
+    plat_devinit_init();
     svc_health_init();
     svc_watchdog_init(NULL);
     mission_state_init();
@@ -47,10 +52,22 @@ int main(void)
 
     st = boot_and_init();
 #if QIRAN_BRINGUP_TRACE
-    xil_printf("boot=%d timer_clk=%luHz load=%lu budget=%luus\r\n", (int)st,
-               (unsigned long)plat_timer_clock_hz(),
-               (unsigned long)plat_timer_load_value(),
-               (unsigned long)exec_cycles_to_us(exec_budget_cycles()));
+    {
+        boot_report_t br;
+
+        plat_boot_report(&br);
+        xil_printf("boot=%d outcome=%d failed=%s total=%lums\r\n", (int)st,
+                   (int)br.outcome, plat_boot_step_name(br.failed_step),
+                   (unsigned long)br.total_ms);
+        xil_printf("  timer_clk=%luHz load=%lu budget=%luus safe_out=%lu "
+                   "post=%lu dev=%lu\r\n",
+                   (unsigned long)plat_timer_clock_hz(),
+                   (unsigned long)plat_timer_load_value(),
+                   (unsigned long)exec_cycles_to_us(exec_budget_cycles()),
+                   (unsigned long)plat_safe_outputs_registered(),
+                   (unsigned long)plat_post_count(),
+                   (unsigned long)plat_devinit_count());
+    }
 #endif
 
     /*

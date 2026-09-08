@@ -21,7 +21,14 @@ IRQ_SRC  := test/host/test_irq.c src/exec/exec_core.c src/plat/plat_cpu.c \
 FDIR_SRC := test/host/test_fdir.c src/exec/exec_core.c src/plat/plat_cpu.c \
             src/plat/plat_gic.c src/plat/plat_isr_uart.c src/svc/svc_ring.c \
             src/svc/svc_log.c
-HOST_BIN := $(BUILD)/test_exec $(BUILD)/test_irq $(BUILD)/test_fdir
+BOOT_SRC := test/host/test_boot.c src/exec/exec_core.c src/plat/plat_cpu.c \
+            src/plat/plat_gic.c src/plat/plat_irq.c src/plat/plat_isr_uart.c \
+            src/plat/plat_boot.c src/plat/plat_timer.c \
+            src/plat/plat_devinit.c src/plat/plat_post.c \
+            src/plat/plat_safe_outputs.c src/svc/svc_fdir.c src/svc/svc_log.c \
+            src/svc/svc_ring.c src/svc/svc_time.c
+HOST_BIN := $(BUILD)/test_exec $(BUILD)/test_irq $(BUILD)/test_fdir \
+            $(BUILD)/test_boot
 
 ARM_CC   := arm-none-eabi-gcc
 ARM_SRC  := $(shell find src -name '*.c')
@@ -43,6 +50,9 @@ $(BUILD)/test_irq: $(IRQ_SRC) | $(BUILD)
 
 $(BUILD)/test_fdir: $(FDIR_SRC) | $(BUILD)
 	@$(HOST_CC) $(WARN) -O1 -g $(HOST_INC) $(FDIR_SRC) -o $@
+
+$(BUILD)/test_boot: $(BOOT_SRC) | $(BUILD)
+	@$(HOST_CC) $(WARN) -O1 -g $(HOST_INC) $(BOOT_SRC) -o $@
 
 syntax: | $(BUILD)
 	@for f in $(ARM_SRC); do \

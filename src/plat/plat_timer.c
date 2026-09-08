@@ -118,4 +118,22 @@ void plat_timer_isr_cycles(uint32_t *last, uint32_t *worst)
     }
 }
 
+#else /* host build: no tick source, values are placeholders */
+
+qiran_status_t plat_timer_init(void) { return QIRAN_OK; }
+void     plat_timer_start(void) { }
+void     plat_timer_stop(void) { }
+uint32_t plat_timer_load_value(void) { return 0U; }
+uint32_t plat_timer_clock_hz(void) { return 0U; }
+
+void plat_timer_isr_cycles(uint32_t *last, uint32_t *worst)
+{
+    if (last != NULL) {
+        *last = 0U;
+    }
+    if (worst != NULL) {
+        *worst = 0U;
+    }
+}
+
 #endif

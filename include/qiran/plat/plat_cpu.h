@@ -31,4 +31,11 @@ void     plat_cpu_irq_restore(uint32_t prior);
 /* Ordering barrier between normal memory and device/ISR-visible state. */
 void plat_cpu_memory_barrier(void);
 
+/*
+ * Cache maintenance over a range. Required by any test that must reach the
+ * memory device itself rather than being satisfied out of cache.
+ */
+void plat_cpu_dcache_flush_range(volatile void *addr, uint32_t len);
+void plat_cpu_dcache_invalidate_range(volatile void *addr, uint32_t len);
+
 #endif

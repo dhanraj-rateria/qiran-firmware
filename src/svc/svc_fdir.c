@@ -8,6 +8,7 @@
 #include "qiran/svc/svc_log.h"
 
 #define STAGE_RETRY QIRAN_STAGE_RETRY_LIMIT
+#define BOOT_RETRY  QIRAN_RESET_REQUEST_LIMIT
 
 /*
  * Tier, escalation and limit for every fault class. Over-current, brownout and
@@ -16,7 +17,9 @@
  *
  * The seven lock-acquisition classes carry the stage retry limit as their
  * Critical-tier limit, which is what makes a stage's retry counter and the
- * Critical counter the same counter.
+ * Critical counter the same counter. The boot-step classes do the same with the
+ * reset-request limit, so exhausting boot retries is what requests the power
+ * cycle, through this one path rather than a second one in the boot sequencer.
  *
  * OPEN: lock-acquisition classes escalate by reporting a flag, following the
  * capability requirements' wording for retry exhaustion. Read strictly, the
@@ -27,9 +30,11 @@
 static const svc_fdir_policy_t k_policy[QIRAN_FAULT_COUNT] = {
     /* NONE                    */ { QIRAN_SEV_MINOR,    QIRAN_ESCALATE_LOG_ONLY,     0U },
 
-    /* BOOT_IMAGE              */ { QIRAN_SEV_SEVERE,   QIRAN_ESCALATE_REPORT,       0U },
-    /* POST                    */ { QIRAN_SEV_SEVERE,   QIRAN_ESCALATE_REPORT,       0U },
-    /* DEVINIT                 */ { QIRAN_SEV_SEVERE,   QIRAN_ESCALATE_REPORT,       0U },
+    /* BOOT_IMAGE              */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_POWER_RESET, BOOT_RETRY },
+    /* SAFE_OUTPUTS            */ { QIRAN_SEV_SEVERE,   QIRAN_ESCALATE_REPORT,       0U },
+    /* POST                    */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_POWER_RESET, BOOT_RETRY },
+    /* DEVINIT                 */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_POWER_RESET, BOOT_RETRY },
+    /* LINK_ESTABLISH          */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_POWER_RESET, BOOT_RETRY },
     /* CYCLE_OVERRUN           */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       5U },
     /* IRQ_OVERFLOW            */ { QIRAN_SEV_MEDIUM,   QIRAN_ESCALATE_LOG_ONLY,     0U },
     /* UART_RX_OVERFLOW        */ { QIRAN_SEV_MINOR,    QIRAN_ESCALATE_LOG_ONLY,     0U },
