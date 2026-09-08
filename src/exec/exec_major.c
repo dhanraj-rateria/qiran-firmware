@@ -1,5 +1,6 @@
 #include "qiran/exec/exec_major.h"
 
+#include "qiran/comm/comm_cmd.h"
 #include "qiran/comm/comm_rs485_hk.h"
 #include "qiran/exec/exec_core.h"
 #include "qiran/exec/exec_sched.h"
@@ -135,6 +136,13 @@ void major_cycle_tasks(void)
                (unsigned long)comm_rs485_hk_transmit_failures(),
                (unsigned long)comm_rs485_hk_sample_failures(),
                (int)comm_rs485_hk_ready());
+    xil_printf("  cmd rx=%lu done=%lu rej=%lu fail=%lu resync=%lu busy=%d\r\n",
+               (unsigned long)comm_cmd_received(),
+               (unsigned long)comm_cmd_completed(),
+               (unsigned long)comm_cmd_rejected(),
+               (unsigned long)comm_cmd_failed(),
+               (unsigned long)comm_cmd_resyncs(),
+               (int)comm_cmd_in_progress());
     xil_printf("  cfg locked=%d changes=%lu rejected=%lu corrected=%lu cal=%d\r\n",
                (int)svc_config_locked(),
                (unsigned long)svc_config_changes(),

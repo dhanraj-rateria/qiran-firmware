@@ -598,6 +598,79 @@ follows the packet standard used on the other link, so both agree.
 
 ---
 
+## FW-35 — Command override authority is a stated rule, not an assumption
+
+Which commands may override a stage already in progress is an unanswered design
+question, recorded as such in the requirements revision. The command table needs
+an answer to function, so it carries one that is stated rather than assumed, and
+that can be reviewed line by line:
+
+- **A command that removes energy is accepted in any state.** Turning something
+  off is never the less safe choice, so refusing it because a stage is busy
+  would be the wrong way round.
+- **A command that applies energy is accepted only before the sequence has
+  committed to an optical configuration**, meaning boot and the precondition
+  stage. Applying it later would contradict the stage that owns that hardware
+  and is holding it at an operating point.
+- **The reset commands are accepted in any state.** Recovery has to work when
+  things are already wrong, and the fault scheme depends on a processor reset
+  being available.
+
+Each is one line of one table. **OPEN** until the authority question is closed.
+
+---
+
+## FW-36 — The mode command selects the only mode there is
+
+The telecommand list gives the mode command no effect, and exactly one operating
+mode exists.
+
+Taken together those settle it: the only mode a mode command can select is the
+one already running, so selecting it succeeds and does nothing, and any other
+selector value is out of range. That limit is derived from there being one mode
+rather than chosen, which is why the parameter range is zero to zero.
+
+Its handler is owned by the command module rather than registered, so it cannot
+be quietly given a different meaning without revisiting this.
+
+**OPEN:** what else a mode command is intended to do.
+
+---
+
+## FW-37 — A command nothing can carry out fails, it is not rejected
+
+A command that is well formed, known, legal in the current state and within
+range, but whose handler has not been registered, returns a failure rather than
+a rejection.
+
+The distinction matters to whoever is reading the results. A rejection says the
+command was wrong; a failure says the command was right and the payload could
+not do it. Reporting an unimplemented action as a rejection would send the
+ground looking for a mistake in what they sent.
+
+The two are also tiered differently: a rejection is a warning logged for
+analysis, while a failure to execute is counted against a Critical class and
+escalates.
+
+---
+
+## FW-38 — Framing resynchronises rather than trusting the stream
+
+Frames are found by a start marker, taken at their fixed length, and accepted
+only on a valid checksum. A frame that fails its checksum has its leading byte
+dropped and the remainder rescanned for the next start marker, and an idle gap
+on the link abandons a partially received frame.
+
+Without that, one corrupted or truncated frame would leave the parser offset by
+a few bytes for the rest of the mission, with every subsequent frame failing its
+checksum. Both recovery paths are tested: a corrupt frame followed by a good
+one, and a half frame followed by a gap and then a good one.
+
+Receipt is time-tagged when the frame is assembled, so the resolution is one
+minor cycle and the true arrival lies within one cycle before the tag.
+
+---
+
 ## Additions not named in the module architecture
 
 These modules are not in the layer table and were added as implementation

@@ -63,6 +63,11 @@ against `budget`, and `fits=0` is a design problem to act on before writing more
 code. `complete=1` means every task due every cycle has run, so the figures are
 real. A full task table follows every twentieth major cycle. See `docs/wcet.md`.
 
+The command line reports frames received, completed, rejected and failed, how
+many times framing had to resynchronise, and whether a command is still running.
+A rising `resync` with nothing received points at a link or framing problem
+rather than at the commands themselves.
+
 The housekeeping line reports frames and status reports sent, transmit and
 sample failures, and whether a link is attached. With no link attached, `link=0`
 and a rising `txfail` are expected: the frame is built correctly and has nowhere
