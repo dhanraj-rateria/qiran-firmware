@@ -252,7 +252,7 @@ qiran_status_t mission_state_request(mission_state_id_t to)
     return QIRAN_OK;
 }
 
-void state_machine_update(void)
+void mission_state_service(void)
 {
     svc_config_param_t budget_param;
     uint32_t elapsed;

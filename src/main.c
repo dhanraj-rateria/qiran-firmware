@@ -3,6 +3,7 @@
 #include "qiran/exec/exec_core.h"
 #include "qiran/exec/exec_major.h"
 #include "qiran/exec/exec_sched.h"
+#include "qiran/mission/mission_ops_seq.h"
 #include "qiran/mission/mission_state.h"
 #include "qiran/photonic/photonic_sched.h"
 #include "qiran/plat/plat_boot.h"
@@ -32,6 +33,7 @@ static void application_init(void)
     svc_health_init();
     svc_watchdog_init(NULL);
     mission_state_init();
+    mission_ops_init();
     photonic_sched_init();
     data_path_init();
     comm_process_init();

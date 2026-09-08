@@ -63,6 +63,13 @@ against `budget`, and `fits=0` is a design problem to act on before writing more
 code. `complete=1` means every task due every cycle has run, so the figures are
 real. A full task table follows every twentieth major cycle. See `docs/wcet.md`.
 
+The operations line reports how many stage steps have run, whether a stage has
+stalled and which, and how many control loops are enabled. A stall means the
+stage spent its retries and the flag has been reported; the state is held
+because the model gives that stage no failure exit. On a bench with no board
+services attached, stage zero stalls after three attempts, which is the correct
+answer rather than a fault in the firmware. See `docs/stage_interface.md`.
+
 The state line reports the current state, how long it has been in it, how many
 times it has been entered, the global re-entry count, payload status, whether
 the run has been terminated, and how many illegal transitions were refused.

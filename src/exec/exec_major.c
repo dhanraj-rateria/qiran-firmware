@@ -2,7 +2,9 @@
 
 #include "qiran/exec/exec_core.h"
 #include "qiran/exec/exec_sched.h"
+#include "qiran/mission/mission_ops_seq.h"
 #include "qiran/mission/mission_state.h"
+#include "qiran/photonic/photonic_sched.h"
 #include "qiran/qiran_config.h"
 #include "qiran/plat/plat_irq.h"
 #include "qiran/plat/plat_timer.h"
@@ -121,6 +123,11 @@ void major_cycle_tasks(void)
                (int)mission_payload_status(),
                (int)mission_state_terminated(),
                (unsigned long)mission_state_rejections());
+    xil_printf("  ops steps=%lu stalled=%d at=%s loops=%lu\r\n",
+               (unsigned long)mission_ops_steps(),
+               (int)mission_ops_stalled(),
+               mission_state_name(mission_ops_stalled_state()),
+               (unsigned long)photonic_sched_enabled_count());
     xil_printf("  cfg locked=%d changes=%lu rejected=%lu corrected=%lu cal=%d\r\n",
                (int)svc_config_locked(),
                (unsigned long)svc_config_changes(),

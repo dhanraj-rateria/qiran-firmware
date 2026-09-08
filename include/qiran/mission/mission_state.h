@@ -43,10 +43,11 @@ void mission_state_init(void);
 
 /*
  * Enforces the time a state is permitted to occupy where the requirements give
- * one. It does not decide transitions: the stage that owns a condition asks for
- * the transition, and this module decides only whether that is allowed.
+ * one. Called by the stage sequencer, which owns the loop's state-machine slot.
+ * This module never decides a transition: the stage that owns a condition asks
+ * for one, and this module decides only whether the model allows it.
  */
-void state_machine_update(void);
+void mission_state_service(void);
 
 mission_state_id_t mission_state_current(void);
 const char        *mission_state_name(mission_state_id_t state);

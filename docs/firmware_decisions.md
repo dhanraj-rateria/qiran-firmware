@@ -466,6 +466,72 @@ status.
 
 ---
 
+## FW-27 — Control loops are not selected by the current state
+
+The obvious design services whichever control loop belongs to the current
+stage. It is wrong here.
+
+Several loops outlive the stage that started them. The thermal loop is required
+to continue autonomously once the source is at its operating point, and both
+interferometer phase locks are required to stay active through detector enable
+and the whole experimental run, as an interlock condition. Servicing by current
+state would drop each of them at the point they matter most.
+
+So a loop runs from when it is enabled until it is disabled, and the current
+state has no say in it. Enabling a loop that was never registered is refused
+rather than silently doing nothing, because that would report a lock as being
+held by a loop that does not exist.
+
+---
+
+## FW-28 — A stage asks, the sequencer acts
+
+A stage step returns an outcome. It never calls the state model. The sequencer
+translates the outcome into a request, and the model decides whether the request
+is allowed.
+
+This keeps the earlier split intact one level further down: a step that names a
+destination the model does not contain is refused, reported and stalls the
+stage, rather than being obeyed because it was asked confidently. Interlock
+failures, which each return to a different stage, are expressed as a named
+destination and validated the same way as everything else.
+
+The outcome also carries the fault class the step hit, so a stage with more than
+one failure mode reports the right one. Where it names none, the stage's own
+class is used.
+
+---
+
+## FW-29 — A stalled stage holds its state rather than inventing an exit
+
+Several stages have no failure transition in the model at all. Stage zero is the
+clearest: the model has no way out of it other than success, and the stage
+diagram records that no retry count was specified for it either.
+
+When a stage spends its retries, the escalation has already reported the flag to
+the observer. The sequencer then stops driving that stage and holds the state.
+Nothing is invented: no retry transition is fabricated for a stage that has
+none, no terminal state is entered, and the run is not silently abandoned. The
+condition is exposed as a stall, so it is visible rather than presenting as a
+loop that is quietly doing nothing.
+
+The retry count itself uses the standard stage retry limit, which is an
+assumption for stage zero specifically, since the requirements give none.
+
+---
+
+## FW-30 — Retry exhaustion is answered before the count is serviced
+
+`svc_fdir_retries_exhausted()` counts reports that the loop's fault slot has not
+processed yet, as well as those it has.
+
+Without that, a caller which reports a failure and immediately asks whether the
+limit is reached reads a count one short, because the fault service runs later
+in the same cycle. The sequencer does exactly that, and would have allowed a
+fourth attempt against a limit of three.
+
+---
+
 ## Additions not named in the module architecture
 
 These modules are not in the layer table and were added as implementation

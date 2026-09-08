@@ -38,7 +38,7 @@ STATE_SRC := test/host/test_state.c src/exec/exec_core.c src/plat/plat_cpu.c \
             src/svc/svc_log.c src/svc/svc_ring.c src/svc/svc_time.c
 HOST_BIN := $(BUILD)/test_exec $(BUILD)/test_irq $(BUILD)/test_fdir \
             $(BUILD)/test_boot $(BUILD)/test_sched $(BUILD)/test_config \
-            $(BUILD)/test_state
+            $(BUILD)/test_state $(BUILD)/test_ops
 
 ARM_CC   := arm-none-eabi-gcc
 ARM_SRC  := $(shell find src -name '*.c')
@@ -72,6 +72,15 @@ $(BUILD)/test_config: $(CFG_SRC) | $(BUILD)
 
 $(BUILD)/test_state: $(STATE_SRC) | $(BUILD)
 	@$(HOST_CC) $(WARN) -O1 -g $(HOST_INC) $(STATE_SRC) -o $@
+
+OPS_SRC := test/host/test_ops.c src/exec/exec_core.c src/mission/mission_state.c \
+           src/photonic/photonic_sched.c src/plat/plat_cpu.c src/plat/plat_gic.c \
+           src/plat/plat_irq.c src/plat/plat_isr_uart.c src/svc/svc_config.c \
+           src/svc/svc_crc.c src/svc/svc_fdir.c src/svc/svc_log.c \
+           src/svc/svc_ring.c src/svc/svc_time.c
+
+$(BUILD)/test_ops: $(OPS_SRC) | $(BUILD)
+	@$(HOST_CC) $(WARN) -O1 -g $(HOST_INC) $(OPS_SRC) -o $@
 
 syntax: | $(BUILD)
 	@for f in $(ARM_SRC); do \

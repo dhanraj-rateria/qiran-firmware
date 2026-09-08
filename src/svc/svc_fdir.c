@@ -44,6 +44,8 @@ static const svc_fdir_policy_t k_policy[QIRAN_FAULT_COUNT] = {
     /* CONFIG                  */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       3U },
     /* STATE_TRANSITION        */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       3U },
     /* STATE_TIMEOUT           */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       3U },
+    /* PRECOND                 */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT, STAGE_RETRY },
+    /* CONTROL_LOOP            */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       5U },
 
     /* OVERCURRENT             */ { QIRAN_SEV_SEVERE,   QIRAN_ESCALATE_POWER_RESET,  0U },
     /* BROWNOUT                */ { QIRAN_SEV_SEVERE,   QIRAN_ESCALATE_POWER_RESET,  0U },
@@ -313,9 +315,24 @@ void error_handling_service(void)
     }
 }
 
+/*
+ * Counts reports that have not yet been serviced as well as those that have, so
+ * the answer is the same whether it is asked before or after the loop's fault
+ * slot has run in the current cycle. Without that, a caller reporting a fault
+ * and immediately asking whether the limit is reached reads a count one short
+ * and is allowed one attempt too many.
+ */
+static uint32_t unserviced(qiran_fault_id_t id)
+{
+    return s_reported[id] - s_serviced[id];
+}
+
 uint32_t svc_fdir_occurrences(qiran_fault_id_t id)
 {
-    return (id < QIRAN_FAULT_COUNT) ? s_record[id].occurrences : 0U;
+    if (id >= QIRAN_FAULT_COUNT) {
+        return 0U;
+    }
+    return s_record[id].occurrences + unserviced(id);
 }
 
 bool svc_fdir_retries_exhausted(qiran_fault_id_t id)
@@ -326,7 +343,7 @@ bool svc_fdir_retries_exhausted(qiran_fault_id_t id)
     if (k_policy[id].limit == 0U) {
         return false;
     }
-    return s_record[id].occurrences >= (uint32_t)k_policy[id].limit;
+    return svc_fdir_occurrences(id) >= (uint32_t)k_policy[id].limit;
 }
 
 void svc_fdir_clear(qiran_fault_id_t id)

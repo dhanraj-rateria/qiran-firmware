@@ -243,21 +243,21 @@ static void test_state_budget_enforcement(void)
     setup();
     advance_to(SPR_MRR_TUNE);
     tick_ms(5000U);
-    state_machine_update();
+    mission_state_service();
     CHECK_TRUE(!svc_fdir_flag(QIRAN_FAULT_STATE_TIMEOUT));
     CHECK_TRUE(mission_state_elapsed_ms() >= 5000U);
 
     TEST_CASE("exceeding it is reported");
     tick_ms(6000U);
-    state_machine_update();
+    mission_state_service();
     error_handling_service();
     CHECK_TRUE(svc_fdir_flag(QIRAN_FAULT_STATE_TIMEOUT));
     CHECK_EQ_U64(svc_fdir_occurrences(QIRAN_FAULT_STATE_TIMEOUT), 1U);
 
     TEST_CASE("it is reported once per entry, not once per cycle");
     tick_ms(2000U);
-    state_machine_update();
-    state_machine_update();
+    mission_state_service();
+    mission_state_service();
     error_handling_service();
     CHECK_EQ_U64(svc_fdir_occurrences(QIRAN_FAULT_STATE_TIMEOUT), 1U);
 
@@ -265,7 +265,7 @@ static void test_state_budget_enforcement(void)
     CHECK_TRUE(mission_state_request(SPR_MRR_TUNE) == QIRAN_OK);
     CHECK_TRUE(mission_state_elapsed_ms() < 100U);
     tick_ms(11000U);
-    state_machine_update();
+    mission_state_service();
     error_handling_service();
     CHECK_EQ_U64(svc_fdir_occurrences(QIRAN_FAULT_STATE_TIMEOUT), 2U);
 
@@ -273,7 +273,7 @@ static void test_state_budget_enforcement(void)
     setup();
     CHECK_TRUE(mission_state_request(SPR_PRECOND) == QIRAN_OK);
     tick_ms(300000U);
-    state_machine_update();
+    mission_state_service();
     CHECK_TRUE(!svc_fdir_flag(QIRAN_FAULT_STATE_TIMEOUT));
 }
 
@@ -297,7 +297,7 @@ static void test_termination(void)
 
     TEST_CASE("the periodic update does nothing once terminated");
     tick_ms(300000U);
-    state_machine_update();
+    mission_state_service();
     CHECK_TRUE(!svc_fdir_flag(QIRAN_FAULT_STATE_TIMEOUT));
 
     TEST_CASE("terminating twice keeps the first cause");
