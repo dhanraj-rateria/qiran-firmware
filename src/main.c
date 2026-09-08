@@ -85,6 +85,14 @@ int main(void)
      */
     if (st == QIRAN_OK) {
         svc_config_lock();
+        (void)mission_state_request(SPR_PRECOND);
+    } else {
+        /*
+         * Boot exhausted its retries and a power cycle has been requested. The
+         * run ends where it stands; the cyclic loop keeps running so status and
+         * diagnostics remain readable.
+         */
+        mission_state_terminate(QIRAN_FAULT_DEVINIT);
     }
 
     exec_resync();

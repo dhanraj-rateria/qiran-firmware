@@ -38,6 +38,7 @@ static const svc_config_def_t k_def[SVC_CONFIG_PARAM_COUNT] = {
     { "dli_settle_nominal",  "ms",    1000, 240000, 30000, false },
     { "dli_settle_max",      "ms",    1000, 240000, 60000, false },
     { "dli_phase_lock",      "ms",    1000, 120000, 10000, false },
+    { "dli_budget",          "ms",    1000, 240000, 80000, false },
     { "dli_lock_rms",        "mrad",     1,   1000,   140, true  },
     { "dli_lock_rms_strict", "mrad",     1,   1000,   100, true  },
     { "dli_servo_bw",        "Hz",     300,    500,   400, true  },

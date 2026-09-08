@@ -63,6 +63,12 @@ against `budget`, and `fits=0` is a design problem to act on before writing more
 code. `complete=1` means every task due every cycle has run, so the figures are
 real. A full task table follows every twentieth major cycle. See `docs/wcet.md`.
 
+The state line reports the current state, how long it has been in it, how many
+times it has been entered, the global re-entry count, payload status, whether
+the run has been terminated, and how many illegal transitions were refused.
+`rej` above zero means stage code asked for a transition the model does not
+contain, which is a wiring fault worth chasing.
+
 The configuration line reports whether parameters are write protected, how many
 changes and rejected writes there have been, how many values had to be corrected
 by an integrity pass, and whether a calibration curve is loaded. On a bench with

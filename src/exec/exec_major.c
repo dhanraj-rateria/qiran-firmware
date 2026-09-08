@@ -2,6 +2,7 @@
 
 #include "qiran/exec/exec_core.h"
 #include "qiran/exec/exec_sched.h"
+#include "qiran/mission/mission_state.h"
 #include "qiran/qiran_config.h"
 #include "qiran/plat/plat_irq.h"
 #include "qiran/plat/plat_timer.h"
@@ -111,6 +112,15 @@ void major_cycle_tasks(void)
                (unsigned long)svc_log_fault_total(),
                (unsigned long)svc_log_dropped(),
                (unsigned long)svc_fdir_reentry_count());
+    xil_printf("  state=%s for=%lums entries=%lu reentry=%lu payload=%d "
+               "term=%d rej=%lu\r\n",
+               mission_state_name(mission_state_current()),
+               (unsigned long)mission_state_elapsed_ms(),
+               (unsigned long)mission_state_entries(mission_state_current()),
+               (unsigned long)mission_state_reentries(),
+               (int)mission_payload_status(),
+               (int)mission_state_terminated(),
+               (unsigned long)mission_state_rejections());
     xil_printf("  cfg locked=%d changes=%lu rejected=%lu corrected=%lu cal=%d\r\n",
                (int)svc_config_locked(),
                (unsigned long)svc_config_changes(),

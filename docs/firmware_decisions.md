@@ -396,6 +396,76 @@ comparison look meaningful when it is not supported by any measurement.
 
 ---
 
+## FW-23 — Stages decide when, the table decides whether
+
+`mission_state_request(to)` is the only way the state changes. The stage that
+owns a condition decides when to ask; this module decides only whether the
+model contains that transition, and refuses, reports and counts it if not.
+
+**Why this split.** The guards in the state model are physical conditions:
+resonator locked, drop ports in range, error signal below threshold. Evaluating
+those belongs to the stage that owns the hardware, not to a state machine.
+Conversely, whether a given move is permitted at all is a property of the model
+and belongs in one reviewable table rather than being implied by wherever a
+stage happens to call.
+
+The consequence worth having: an unlisted transition cannot happen silently. A
+request for one is a detected fault, so a wiring mistake in stage integration
+surfaces as a reported fault rather than as an undefined state change.
+
+---
+
+## FW-24 — Termination is a condition, not a state
+
+The model has two exits that lead nowhere: unrecoverable degradation during
+verification, and the end of data handling. Neither has a state, and no safe or
+fault state exists to put them in.
+
+`mission_state_terminate()` therefore sets a flag. The current state is held,
+further transitions are refused, and the cyclic loop keeps running so status and
+diagnostics stay readable. Nothing is suspended, which is what distinguishes
+this from entering a safe state.
+
+Adding a terminal state would have been the obvious alternative and is
+explicitly ruled out: the interrupt and state sets are kept to the minimum the
+requirements demand, and a fifteen-state assertion in the implementation makes
+adding a sixteenth a deliberate act.
+
+---
+
+## FW-25 — A retry is not a re-entry
+
+Seven transitions in the model return a state to itself, and twelve return to an
+earlier stage. Only the latter increment the global re-entry count.
+
+A retry of the same stage is already counted as its own Critical-tier fault
+class with the stage retry limit. Counting it as a re-entry as well would spend
+the global allowance of five twice over on a single condition, and a stage
+allowed three retries would exhaust that allowance on its own.
+
+The distinction is a field in the table rather than a comparison of state
+ordinals, because the recalibration state sits at the end of the enumeration
+while belonging logically between stages, and an ordinal test would misread it.
+A unit test asserts that every re-entry other than that one does go to a lower
+ordinal, so the table cannot drift from the intent unnoticed.
+
+---
+
+## FW-26 — Payload status is set by whoever changes the hardware
+
+Status becomes operational on the one transition the requirements tie to it,
+leaving detector enable for the first verification tier. It is not otherwise
+derived from the state.
+
+The reason is that two re-entries out of the experiment deliberately differ:
+loss of laser or resonator lock removes detector bias, while drift of the
+coupled resonators or the interferometer explicitly leaves it applied. Status
+therefore cannot be inferred from which state is current, and inferring it
+would report bias removed when it is still on. Whoever removes the bias sets the
+status.
+
+---
+
 ## Additions not named in the module architecture
 
 These modules are not in the layer table and were added as implementation
@@ -429,7 +499,21 @@ Currently: watchdog timeout in minor cycles, the link-establishment budget
 treated as bounded within the device-initialisation window, and the escalation
 action for lock-acquisition retry exhaustion.
 
-### Two questions for systems engineering
+### Three further open items from the state model
+
+**The extended characterisation state has no transitions.** It is reached only
+on ground command, and the model gives neither the states from which that
+command is legal nor where it returns to. It is left absent from the transition
+table rather than invented, so any request to enter it is currently refused and
+reported. A unit test asserts it is unreachable, so this stays visible.
+
+**What ends the run after data handling.** The model has data handling repeat
+while there is data to transfer and nothing after it. Nothing is assumed.
+
+**Whether the pre-condition stage has a time limit.** No figure is given, so it
+is not policed. Every other stage with a documented duration is.
+
+### Questions for systems engineering
 
 **Does stage retry exhaustion request a power reset, or only report a flag?**
 The capability requirements say a stage that exhausts its retries raises an
