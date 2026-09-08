@@ -76,6 +76,14 @@ and each byte costs one ring push with no branch on content. It is bounded but
 not constant-time, which is acceptable and is recorded here rather than assumed
 away. Its measured worst case appears in `plat_irq_stats_get(PLAT_IRQ_UART)`.
 
+## Reporting a fault from interrupt context
+
+`svc_fdir_report()` and the `svc_log_*` functions are callable from an interrupt.
+Both take a brief interrupt-disabled section, a handful of stores wide, because
+several interrupts as well as the loop can write the same counter and that is
+more than one producer. Neither performs delivery, allocation, or any device
+access. See decision FW-10 for why delivery is deliberately left to the loop.
+
 ## Deliberate omission
 
 Frame assembly is not done in interrupt context. See decision FW-08.

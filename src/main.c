@@ -9,6 +9,7 @@
 #include "qiran/qiran_config.h"
 #include "qiran/svc/svc_fdir.h"
 #include "qiran/svc/svc_health.h"
+#include "qiran/svc/svc_log.h"
 #include "qiran/svc/svc_time.h"
 #include "qiran/svc/svc_watchdog.h"
 
@@ -18,6 +19,7 @@
 
 static void application_init(void)
 {
+    svc_log_init();
     svc_fdir_init();
     svc_health_init();
     svc_watchdog_init(NULL);

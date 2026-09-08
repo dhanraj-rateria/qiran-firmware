@@ -68,6 +68,19 @@ QIRAN_STATIC_ASSERT((QIRAN_UART_RX_RING_BYTES &
                      (QIRAN_UART_RX_RING_BYTES - 1U)) == 0U,
                     uart_rx_ring_is_power_of_two);
 
+/* --- Fault log --- */
+
+/*
+ * Records held in RAM before a flush to non-volatile storage. Must be a power
+ * of two. When full the newest record is dropped rather than the oldest being
+ * overwritten, because the first fault in a cascade is usually the root cause
+ * and later ones its consequences; the drop count preserves how much was lost.
+ */
+#define QIRAN_LOG_DEPTH 128U
+
+QIRAN_STATIC_ASSERT((QIRAN_LOG_DEPTH & (QIRAN_LOG_DEPTH - 1U)) == 0U,
+                    log_depth_is_power_of_two);
+
 /* --- Global fault-management limits --- */
 
 #define QIRAN_STAGE_RETRY_LIMIT     3U

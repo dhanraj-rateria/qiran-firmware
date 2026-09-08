@@ -18,7 +18,10 @@ HOST_INC := $(INC) -Itest/host -D_POSIX_C_SOURCE=200809L
 EXEC_SRC := test/host/test_exec.c src/svc/svc_time.c src/plat/plat_cpu.c
 IRQ_SRC  := test/host/test_irq.c src/exec/exec_core.c src/plat/plat_cpu.c \
             src/plat/plat_gic.c src/plat/plat_isr_uart.c src/svc/svc_ring.c
-HOST_BIN := $(BUILD)/test_exec $(BUILD)/test_irq
+FDIR_SRC := test/host/test_fdir.c src/exec/exec_core.c src/plat/plat_cpu.c \
+            src/plat/plat_gic.c src/plat/plat_isr_uart.c src/svc/svc_ring.c \
+            src/svc/svc_log.c
+HOST_BIN := $(BUILD)/test_exec $(BUILD)/test_irq $(BUILD)/test_fdir
 
 ARM_CC   := arm-none-eabi-gcc
 ARM_SRC  := $(shell find src -name '*.c')
@@ -37,6 +40,9 @@ $(BUILD)/test_exec: $(EXEC_SRC) | $(BUILD)
 
 $(BUILD)/test_irq: $(IRQ_SRC) | $(BUILD)
 	@$(HOST_CC) $(WARN) -O1 -g $(HOST_INC) $(IRQ_SRC) -o $@
+
+$(BUILD)/test_fdir: $(FDIR_SRC) | $(BUILD)
+	@$(HOST_CC) $(WARN) -O1 -g $(HOST_INC) $(FDIR_SRC) -o $@
 
 syntax: | $(BUILD)
 	@for f in $(ARM_SRC); do \

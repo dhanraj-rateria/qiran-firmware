@@ -4,6 +4,8 @@
 #include "qiran/qiran_config.h"
 #include "qiran/plat/plat_irq.h"
 #include "qiran/plat/plat_timer.h"
+#include "qiran/svc/svc_fdir.h"
+#include "qiran/svc/svc_log.h"
 #include "qiran/svc/svc_watchdog.h"
 
 #if QIRAN_BRINGUP_TRACE
@@ -60,5 +62,15 @@ void major_cycle_tasks(void)
                (int)svc_watchdog_armed());
 
     trace_interrupts();
+
+    xil_printf("  fdir sev=%lu/%lu/%lu/%lu esc_undeliv=%lu log=%lu/%lu reentry=%lu\r\n",
+               (unsigned long)svc_fdir_severity_count(QIRAN_SEV_MINOR),
+               (unsigned long)svc_fdir_severity_count(QIRAN_SEV_MEDIUM),
+               (unsigned long)svc_fdir_severity_count(QIRAN_SEV_CRITICAL),
+               (unsigned long)svc_fdir_severity_count(QIRAN_SEV_SEVERE),
+               (unsigned long)svc_fdir_undelivered(),
+               (unsigned long)svc_log_fault_total(),
+               (unsigned long)svc_log_dropped(),
+               (unsigned long)svc_fdir_reentry_count());
 #endif
 }

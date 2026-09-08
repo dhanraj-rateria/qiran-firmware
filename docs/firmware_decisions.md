@@ -154,6 +154,72 @@ format, so fixing the format later does not touch interrupt code.
 
 ---
 
+## FW-09 — Four severity tiers, not five
+
+The severity scheme names two kinds of Severe fault: one where the processor
+keeps executing, and one where sequential execution is not guaranteed. Only the
+first is a reportable severity here.
+
+**Reasoning:** software cannot report the second kind. Software reporting a
+fault is proof that software is still running, which is precisely what that case
+denies. It is detected by the watchdog going unserviced and by the observer's
+absence-of-communication timeout, neither of which is a call into this module.
+
+So `qiran_severity_t` has four values, and the second kind appears in the design
+as the watchdog gate in `svc_watchdog.c` plus the observer's own supervision. A
+watchdog expiry that is somehow survived long enough to be seen is reported as
+its own fault class.
+
+---
+
+## FW-10 — Escalation is raised in interrupt context, delivered in the loop
+
+**Conflict in the requirements.** The fault-handling requirement says the
+interrupt service routine shall itself raise the power-reset request to the
+observer. The executive requirement says no interrupt service routine shall
+perform blocking calls. Raising the request means a link transaction, so the two
+cannot both be met literally.
+
+**Decision:** `svc_fdir_report()` is interrupt-safe and does no delivery. It
+records the occurrence and returns. `error_handling_service()`, which runs every
+minor cycle, performs the classification and the delivery.
+
+**Why this satisfies both.** The severe tier requires remedial action within the
+next execution cycle. The loop runs every 20 ms, so a fault reported by an
+interrupt is escalated in the very next cycle, which is the stated bound. The
+interrupt-context rule is kept intact, and no interrupt ever waits on a link.
+
+---
+
+## FW-11 — One log entry per fault class per service pass
+
+A fault present every cycle would otherwise write 50 log records a second, and
+the service's execution time would scale with fault rate, which is exactly what
+must not happen to a task inside a fixed cycle budget.
+
+Each pass writes at most one record per class, carrying that pass's occurrence
+count. Worst-case work per pass is therefore bounded by the number of fault
+classes, a compile-time constant, not by how badly things are going. Every tier
+still logs, and the cumulative occurrence count per class is exact.
+
+---
+
+## FW-12 — Fault tier does not drive the health verdict
+
+The watchdog is serviced only while the health verdict is healthy. It would be
+easy to wire a severe fault into that verdict. That would be wrong.
+
+A severe fault where the processor still executes requires a power-reset request
+followed by **continued normal execution**. Marking health failed would stop the
+watchdog being serviced and so trigger a processor reset as well, which is a
+second, unrequested recovery action on top of the one specified.
+
+So the health verdict answers "can this processor keep executing correctly",
+which is the health monitor's question, and the fault tier answers "how bad is
+this payload condition". They stay separate.
+
+---
+
 ## Additions not named in the module architecture
 
 These modules are not in the layer table and were added as implementation
@@ -183,5 +249,22 @@ Every provisional value is tagged `OPEN:` in `include/qiran/qiran_config.h`.
 
     grep -rn "OPEN:" include src
 
-Currently: watchdog timeout in minor cycles, and the link-establishment budget
-treated as bounded within the device-initialisation window.
+Currently: watchdog timeout in minor cycles, the link-establishment budget
+treated as bounded within the device-initialisation window, and the escalation
+action for lock-acquisition retry exhaustion.
+
+### Two questions for systems engineering
+
+**Does stage retry exhaustion request a power reset, or only report a flag?**
+The capability requirements say a stage that exhausts its retries raises an
+error flag to the observer. The error-handling reconciliation says that flag
+*is* the elevation from Critical to Severe, and the Severe response is a
+power-reset request. Read strictly, one stubborn stage then costs a full reset
+cycle out of the operating window. The policy table currently reports a flag
+without requesting a reset. Confirm which is intended.
+
+**Is the Critical threshold counted in occurrences or in execution cycles?**
+The severity table says both in different sentences. Occurrences is implemented,
+because the per-stage retry limit it has to equal is plainly a count of
+attempts. For a fault that recurs every cycle the two coincide, so this only
+matters for an intermittent fault.

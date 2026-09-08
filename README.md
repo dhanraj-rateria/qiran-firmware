@@ -47,10 +47,16 @@ Expected UART output, one line per major cycle:
     boot=0 timer_clk=333333343Hz load=6666665 budget=20000us
     t=25 maj=1 body=<n>us peak=<n>us budget=20000us ovr=0 lost=0 wdt=0
       isr timer=<n>c
+      fdir sev=0/0/0/0 esc_undeliv=0 log=0/0 reentry=0
 
 The second line reports measured handler durations in CPU cycles. Only the tick
 appears until a device supplies an acknowledge hook for the other sources; each
 one then adds `name=taken/dropped/worst`.
+
+The third line reports fault counts by tier, lowest first, then escalations that
+could not be delivered because no uplink is registered, then logged faults and
+dropped log records, then re-entries. All zeros is the expected steady state;
+anything else on an idle bench is a real finding.
 
 Check, in order:
 
