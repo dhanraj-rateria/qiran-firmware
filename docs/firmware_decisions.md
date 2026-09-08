@@ -282,6 +282,46 @@ whoever owns the raw output lines, not to the device abstraction layer.
 
 ---
 
+## FW-16 — A task table, without a dispatch table
+
+The executive requirements forbid dynamic event dispatch and a priority queue,
+and the reference skeleton notes that a dynamic dispatch table is deliberately
+absent. A task table therefore needs justifying carefully.
+
+**What was added:** a const table of task definitions, and per-task measurement
+around each call.
+
+**What was not added:** any means of reaching a task through it. There is no
+function pointer in the table, nothing iterates it to decide what to run, and
+the seven calls plus the major-cycle call remain written out literally and in
+order in `main()`. The order is still the entire scheduling policy, and it is
+still readable in one place as consecutive statements.
+
+**Why it is needed.** The remedy for a failed schedulability check is to move
+tasks that do not need every cycle onto separate slots. Identifying *which* task
+requires per-task figures; the whole-loop-body measurement already in place
+gives one number for eight tasks and cannot answer it. Holding placement as data
+also makes that remedy an edit to one line rather than a change to the executive.
+
+**Cost:** two cycle-counter reads per task, about a hundred and fifty cycles per
+minor cycle against a budget of thirteen million. Left enabled in flight, since
+worst-case execution time is exactly the kind of thing worth telemetering.
+
+---
+
+## FW-17 — The schedulability check is a maximum over slots
+
+Summing every task's worst case would be the conservative bound, and it is
+wrong for this design: it assumes spread tasks always coincide, so moving a task
+to a quieter slot would not change the answer. That makes the documented remedy
+for a failed check impossible to verify.
+
+The check instead sums, per slot, only the tasks due in that slot, and reports
+the largest along with which slot it was. Exact given the placement, and it
+makes relieving the worst slot measurable.
+
+---
+
 ## Additions not named in the module architecture
 
 These modules are not in the layer table and were added as implementation

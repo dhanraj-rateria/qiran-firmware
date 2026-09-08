@@ -58,6 +58,11 @@ A terminal boot outcome is expected until a safe-output action is registered:
 the payload cannot claim its actuators are safe when no drive path exists yet.
 The cyclic loop runs regardless, so executive bring-up is unaffected by it.
 
+The schedulability line is the one that matters as tasks are added: `used`
+against `budget`, and `fits=0` is a design problem to act on before writing more
+code. `complete=1` means every task due every cycle has run, so the figures are
+real. A full task table follows every twentieth major cycle. See `docs/wcet.md`.
+
 The fault line reports counts by tier, lowest first, then escalations that
 could not be delivered because no uplink is registered, then logged faults and
 dropped log records, then re-entries. All zeros is the expected steady state;

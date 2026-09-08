@@ -2,6 +2,7 @@
 #include "qiran/data/data_path.h"
 #include "qiran/exec/exec_core.h"
 #include "qiran/exec/exec_major.h"
+#include "qiran/exec/exec_sched.h"
 #include "qiran/mission/mission_state.h"
 #include "qiran/photonic/photonic_sched.h"
 #include "qiran/plat/plat_boot.h"
@@ -33,6 +34,7 @@ static void application_init(void)
     data_path_init();
     comm_process_init();
     exec_major_init();
+    exec_sched_init();
 }
 
 int main(void)
@@ -80,16 +82,16 @@ int main(void)
     for (;;) {
         exec_wait_for_minor_tick();
 
-        state_machine_update();
-        health_monitor_periodic();
-        control_loop_service_calls();
-        data_path_manage();
-        communication_process();
-        error_handling_service();
-        watchdog_tickle_if_healthy();
+        EXEC_RUN(EXEC_TASK_STATE_MACHINE, state_machine_update());
+        EXEC_RUN(EXEC_TASK_HEALTH,         health_monitor_periodic());
+        EXEC_RUN(EXEC_TASK_CONTROL_LOOPS,  control_loop_service_calls());
+        EXEC_RUN(EXEC_TASK_DATA_PATH,      data_path_manage());
+        EXEC_RUN(EXEC_TASK_COMMS,          communication_process());
+        EXEC_RUN(EXEC_TASK_FDIR,           error_handling_service());
+        EXEC_RUN(EXEC_TASK_WATCHDOG,       watchdog_tickle_if_healthy());
 
         if (exec_major_tick_due()) {
-            major_cycle_tasks();
+            EXEC_RUN(EXEC_TASK_MAJOR, major_cycle_tasks());
         }
     }
 }

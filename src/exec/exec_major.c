@@ -1,6 +1,7 @@
 #include "qiran/exec/exec_major.h"
 
 #include "qiran/exec/exec_core.h"
+#include "qiran/exec/exec_sched.h"
 #include "qiran/qiran_config.h"
 #include "qiran/plat/plat_irq.h"
 #include "qiran/plat/plat_timer.h"
@@ -12,8 +13,15 @@
 #include "xil_printf.h"
 #endif
 
+#if QIRAN_BRINGUP_TRACE
+static uint64_t s_last_table_dump;
+#endif
+
 void exec_major_init(void)
 {
+#if QIRAN_BRINGUP_TRACE
+    s_last_table_dump = 0U;
+#endif
 }
 
 #if QIRAN_BRINGUP_TRACE
@@ -44,10 +52,33 @@ static void trace_interrupts(void)
 }
 #endif
 
+#if QIRAN_BRINGUP_TRACE
+static void trace_task_table(void)
+{
+    uint32_t i;
+
+    xil_printf("  task                cls  runs      last    mean    worst  (us)\r\n");
+
+    for (i = 0U; i < (uint32_t)EXEC_TASK_COUNT; i++) {
+        exec_task_id_t id = (exec_task_id_t)i;
+        const exec_task_def_t *def = exec_task_def(id);
+        exec_task_stat_t st;
+
+        exec_task_stat_get(id, &st);
+        xil_printf("  %-18s %4d %6lu %8lu %7lu %8lu\r\n",
+                   def->name, (int)def->cycle, (unsigned long)st.runs,
+                   (unsigned long)exec_cycles_to_us(st.cycles_last),
+                   (unsigned long)exec_cycles_to_us(exec_task_mean_cycles(id)),
+                   (unsigned long)exec_cycles_to_us(st.cycles_worst));
+    }
+}
+#endif
+
 void major_cycle_tasks(void)
 {
 #if QIRAN_BRINGUP_TRACE
     exec_stats_t st;
+    exec_sched_check_t chk;
 
     exec_stats_get(&st);
     xil_printf("t=%lu maj=%lu body=%luus peak=%luus budget=%luus "
@@ -72,5 +103,22 @@ void major_cycle_tasks(void)
                (unsigned long)svc_log_fault_total(),
                (unsigned long)svc_log_dropped(),
                (unsigned long)svc_fdir_reentry_count());
+
+    exec_sched_check(&chk);
+    xil_printf("  sched worst_slot=%lu used=%luus budget=%luus margin=%luus "
+               "fits=%d complete=%d\r\n",
+               (unsigned long)chk.worst_slot,
+               (unsigned long)exec_cycles_to_us(chk.worst_slot_cycles),
+               (unsigned long)exec_cycles_to_us(chk.budget_cycles),
+               (unsigned long)exec_cycles_to_us(chk.margin_cycles),
+               (int)chk.fits, (int)chk.complete);
+
+    if ((exec_minor_tick_count() /
+         (uint64_t)(QIRAN_MINOR_PER_MAJOR * QIRAN_TRACE_TABLE_PERIOD)) !=
+        s_last_table_dump) {
+        s_last_table_dump = exec_minor_tick_count() /
+            (uint64_t)(QIRAN_MINOR_PER_MAJOR * QIRAN_TRACE_TABLE_PERIOD);
+        trace_task_table();
+    }
 #endif
 }

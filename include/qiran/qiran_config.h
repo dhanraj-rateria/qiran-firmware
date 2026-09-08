@@ -18,6 +18,11 @@
 #define QIRAN_BRINGUP_TRACE 1
 #endif
 
+/* Major cycles between full task-table dumps in the bring-up trace. */
+#if !defined(QIRAN_TRACE_TABLE_PERIOD)
+#define QIRAN_TRACE_TABLE_PERIOD 20U
+#endif
+
 /* --- Executive timing base --- */
 
 #define QIRAN_MINOR_CYCLE_MS        20U
