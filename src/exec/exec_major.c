@@ -5,6 +5,7 @@
 #include "qiran/qiran_config.h"
 #include "qiran/plat/plat_irq.h"
 #include "qiran/plat/plat_timer.h"
+#include "qiran/svc/svc_config.h"
 #include "qiran/svc/svc_fdir.h"
 #include "qiran/svc/svc_log.h"
 #include "qiran/svc/svc_watchdog.h"
@@ -76,6 +77,13 @@ static void trace_task_table(void)
 
 void major_cycle_tasks(void)
 {
+    /*
+     * A parameter corrupted in place would otherwise be found only when it
+     * produced a bad command, so the block is re-checked against its checksum
+     * and its limits once per major cycle.
+     */
+    (void)svc_config_verify();
+
 #if QIRAN_BRINGUP_TRACE
     exec_stats_t st;
     exec_sched_check_t chk;
@@ -103,6 +111,12 @@ void major_cycle_tasks(void)
                (unsigned long)svc_log_fault_total(),
                (unsigned long)svc_log_dropped(),
                (unsigned long)svc_fdir_reentry_count());
+    xil_printf("  cfg locked=%d changes=%lu rejected=%lu corrected=%lu cal=%d\r\n",
+               (int)svc_config_locked(),
+               (unsigned long)svc_config_changes(),
+               (unsigned long)svc_config_rejections(),
+               (unsigned long)svc_config_corrections(),
+               (int)svc_config_calibration_valid());
 
     exec_sched_check(&chk);
     xil_printf("  sched worst_slot=%lu used=%luus budget=%luus margin=%luus "

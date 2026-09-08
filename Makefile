@@ -28,8 +28,12 @@ BOOT_SRC := test/host/test_boot.c src/exec/exec_core.c src/plat/plat_cpu.c \
             src/plat/plat_safe_outputs.c src/svc/svc_fdir.c src/svc/svc_log.c \
             src/svc/svc_ring.c src/svc/svc_time.c
 SCHED_SRC := test/host/test_sched.c src/exec/exec_core.c src/plat/plat_cpu.c
+CFG_SRC  := test/host/test_config.c src/exec/exec_core.c src/plat/plat_cpu.c \
+            src/plat/plat_gic.c src/plat/plat_irq.c src/plat/plat_isr_uart.c \
+            src/svc/svc_crc.c src/svc/svc_fdir.c src/svc/svc_log.c \
+            src/svc/svc_ring.c
 HOST_BIN := $(BUILD)/test_exec $(BUILD)/test_irq $(BUILD)/test_fdir \
-            $(BUILD)/test_boot $(BUILD)/test_sched
+            $(BUILD)/test_boot $(BUILD)/test_sched $(BUILD)/test_config
 
 ARM_CC   := arm-none-eabi-gcc
 ARM_SRC  := $(shell find src -name '*.c')
@@ -57,6 +61,9 @@ $(BUILD)/test_boot: $(BOOT_SRC) | $(BUILD)
 
 $(BUILD)/test_sched: $(SCHED_SRC) | $(BUILD)
 	@$(HOST_CC) $(WARN) -O1 -g $(HOST_INC) $(SCHED_SRC) -o $@
+
+$(BUILD)/test_config: $(CFG_SRC) | $(BUILD)
+	@$(HOST_CC) $(WARN) -O1 -g $(HOST_INC) $(CFG_SRC) -o $@
 
 syntax: | $(BUILD)
 	@for f in $(ARM_SRC); do \

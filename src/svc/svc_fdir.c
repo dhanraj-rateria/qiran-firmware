@@ -41,6 +41,7 @@ static const svc_fdir_policy_t k_policy[QIRAN_FAULT_COUNT] = {
     /* PL_ERROR                */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       5U },
     /* WATCHDOG_EXPIRY         */ { QIRAN_SEV_SEVERE,   QIRAN_ESCALATE_REPORT,       0U },
     /* MEMORY                  */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_POWER_RESET,  3U },
+    /* CONFIG                  */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       3U },
 
     /* OVERCURRENT             */ { QIRAN_SEV_SEVERE,   QIRAN_ESCALATE_POWER_RESET,  0U },
     /* BROWNOUT                */ { QIRAN_SEV_SEVERE,   QIRAN_ESCALATE_POWER_RESET,  0U },

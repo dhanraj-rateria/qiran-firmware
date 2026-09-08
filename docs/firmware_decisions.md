@@ -322,6 +322,80 @@ makes relieving the worst slot measurable.
 
 ---
 
+## FW-18 — Parameters are integers in named units, not floating point
+
+Every scalar parameter is an integer carrying its unit in its name: millidegrees
+Celsius, microamps, microkelvin, milliradians, nanowatts.
+
+**Why.** At the precision the requirements state, all of these quantities are
+integral: a temperature band of a tenth of a degree, a stability of one and a
+half millikelvin, a lock error of a hundred and forty milliradians. Integers
+make comparisons exact and repeatable, remove any rounding difference between
+builds, and leave no question about floating-point context around an interrupt.
+
+Floating point stays appropriate in the data-processing path, where visibility,
+the correlation bound and the coincidence ratios are computed. That is a
+different module with different constraints.
+
+---
+
+## FW-19 — Limits live in the parameter table, not at the point of use
+
+Each parameter carries a minimum and a maximum, checked on every write and on
+every integrity pass.
+
+The requirement that a commanded temperature must under no condition leave its
+absolute range is the clearest case: expressed as a limit in the table it is
+stated once and enforced everywhere, whereas expressed as a check in the stage
+that commands it, it holds only where somebody remembered to write it.
+
+Thresholds the requirements describe without giving a number are deliberately
+**absent** from the table rather than filled with plausible values. The
+resonator lock error threshold, the drop-port target range and the splitting
+specification must arrive from their owners as reviewed numbers.
+
+---
+
+## FW-20 — The live parameter block is re-checked every major cycle
+
+`svc_config_verify()` recomputes a checksum over the live values and re-checks
+each against its limits, restoring from storage or from defaults on a mismatch.
+
+A parameter corrupted in place, by an upset or by a stray write, would otherwise
+be discovered only when it produced a bad command. The checksum catches a flip
+that leaves the value legal, which a limits check alone cannot; the limits check
+catches a value written by something that bypassed the setter, which a checksum
+alone cannot. Both are needed, and both are cheap over twenty-seven values.
+
+---
+
+## FW-21 — Loading reports parameters and calibration separately
+
+`svc_config_load()` returns the outcome for the parameter block; calibration
+validity is a separate query.
+
+They were briefly folded into one status, which was wrong. Boot treats a load
+failure as a step failure, so a missing calibration curve would have taken the
+retries, requested a power cycle, and ended the run terminal. Without parameters
+nothing can be commanded safely; without calibration the payload still runs and
+only the comparisons needing the curve are unavailable. Different consequences
+need different answers. Both are still reported as faults.
+
+The load status distinguishes intact-and-legal, intact-with-some-values-fallen-
+back-to-default, and unusable, so the caller can decide what is fatal rather
+than being told only that something went wrong.
+
+---
+
+## FW-22 — The calibration curve refuses to extrapolate
+
+Asking the curve for a current outside its calibrated span returns a range
+error rather than an extrapolated figure. A measured power is compared against
+this to a stated tolerance; an extrapolated expectation would make that
+comparison look meaningful when it is not supported by any measurement.
+
+---
+
 ## Additions not named in the module architecture
 
 These modules are not in the layer table and were added as implementation

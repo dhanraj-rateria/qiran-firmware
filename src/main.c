@@ -11,6 +11,7 @@
 #include "qiran/plat/plat_post.h"
 #include "qiran/plat/plat_timer.h"
 #include "qiran/qiran_config.h"
+#include "qiran/svc/svc_config.h"
 #include "qiran/svc/svc_fdir.h"
 #include "qiran/svc/svc_health.h"
 #include "qiran/svc/svc_log.h"
@@ -25,6 +26,7 @@ static void application_init(void)
 {
     svc_log_init();
     svc_fdir_init();
+    svc_config_init();
     plat_post_init();
     plat_devinit_init();
     svc_health_init();
@@ -77,6 +79,14 @@ int main(void)
      * discarded here rather than being charged against the first loop body as
      * an overrun.
      */
+    /*
+     * Parameters are settable while boot runs and locked once operational;
+     * those the ground may adjust by command stay writable either way.
+     */
+    if (st == QIRAN_OK) {
+        svc_config_lock();
+    }
+
     exec_resync();
 
     for (;;) {

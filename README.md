@@ -63,6 +63,12 @@ against `budget`, and `fits=0` is a design problem to act on before writing more
 code. `complete=1` means every task due every cycle has run, so the figures are
 real. A full task table follows every twentieth major cycle. See `docs/wcet.md`.
 
+The configuration line reports whether parameters are write protected, how many
+changes and rejected writes there have been, how many values had to be corrected
+by an integrity pass, and whether a calibration curve is loaded. On a bench with
+no configuration partition attached, `cal=0` and one configuration fault are
+expected.
+
 The fault line reports counts by tier, lowest first, then escalations that
 could not be delivered because no uplink is registered, then logged faults and
 dropped log records, then re-entries. All zeros is the expected steady state;
