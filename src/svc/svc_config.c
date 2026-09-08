@@ -52,7 +52,14 @@ static const svc_config_def_t k_def[SVC_CONFIG_PARAM_COUNT] = {
     { "pvs_t2_budget",       "ms",    1000, 300000,120000, false },
     { "pvs_sweep_points",    "count",   15,    128,    15, true  },
     { "pvs_sweep_settle",    "ms",       1,     10,     2, true  },
-    { "pvs_integration",     "ms",    1000,  10000,  5000, true  }
+    { "pvs_integration",     "ms",    1000,  10000,  5000, true  },
+
+    /*
+     * OPEN: no housekeeping interval is stated. It must stay well inside the
+     * observer's absence-of-communication timeout, since that frame arriving is
+     * what proves the payload is still executing.
+     */
+    { "hk_period",           "ms",     100,  10000,  1000, true  }
 };
 
 QIRAN_STATIC_ASSERT(QIRAN_ARRAY_LEN(k_def) == (size_t)SVC_CONFIG_PARAM_COUNT,

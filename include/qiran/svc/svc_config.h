@@ -49,6 +49,8 @@ typedef enum {
     CFG_PVS_SWEEP_SETTLE_MS,
     CFG_PVS_INTEGRATION_MS,
 
+    CFG_HK_PERIOD_MS,
+
     SVC_CONFIG_PARAM_COUNT
 } svc_config_param_t;
 

@@ -1,5 +1,6 @@
 #include "qiran/exec/exec_major.h"
 
+#include "qiran/comm/comm_rs485_hk.h"
 #include "qiran/exec/exec_core.h"
 #include "qiran/exec/exec_sched.h"
 #include "qiran/mission/mission_ops_seq.h"
@@ -128,6 +129,12 @@ void major_cycle_tasks(void)
                (int)mission_ops_stalled(),
                mission_state_name(mission_ops_stalled_state()),
                (unsigned long)photonic_sched_enabled_count());
+    xil_printf("  hk sent=%lu status=%lu txfail=%lu smpfail=%lu link=%d\r\n",
+               (unsigned long)comm_rs485_hk_frames_sent(),
+               (unsigned long)comm_rs485_hk_status_sent(),
+               (unsigned long)comm_rs485_hk_transmit_failures(),
+               (unsigned long)comm_rs485_hk_sample_failures(),
+               (int)comm_rs485_hk_ready());
     xil_printf("  cfg locked=%d changes=%lu rejected=%lu corrected=%lu cal=%d\r\n",
                (int)svc_config_locked(),
                (unsigned long)svc_config_changes(),

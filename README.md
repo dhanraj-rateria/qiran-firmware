@@ -63,6 +63,11 @@ against `budget`, and `fits=0` is a design problem to act on before writing more
 code. `complete=1` means every task due every cycle has run, so the figures are
 real. A full task table follows every twentieth major cycle. See `docs/wcet.md`.
 
+The housekeeping line reports frames and status reports sent, transmit and
+sample failures, and whether a link is attached. With no link attached, `link=0`
+and a rising `txfail` are expected: the frame is built correctly and has nowhere
+to go. Attaching a transmit hook and a sampler is all that is needed.
+
 The operations line reports how many stage steps have run, whether a stage has
 stalled and which, and how many control loops are enabled. A stall means the
 stage spent its retries and the flag has been reported; the state is held

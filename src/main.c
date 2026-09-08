@@ -1,4 +1,5 @@
 #include "qiran/comm/comm_process.h"
+#include "qiran/comm/comm_rs485_hk.h"
 #include "qiran/data/data_path.h"
 #include "qiran/exec/exec_core.h"
 #include "qiran/exec/exec_major.h"
@@ -37,6 +38,12 @@ static void application_init(void)
     photonic_sched_init();
     data_path_init();
     comm_process_init();
+
+    /*
+     * Fault escalations go out over the housekeeping link from here on, rather
+     * than being counted as undelivered.
+     */
+    (void)svc_fdir_set_uplink(comm_rs485_hk_uplink());
     exec_major_init();
     exec_sched_init();
 }
@@ -86,7 +93,21 @@ int main(void)
      * those the ground may adjust by command stay writable either way.
      */
     if (st == QIRAN_OK) {
+        comm_status_report_t report;
+        uint32_t i;
+
         svc_config_lock();
+
+        /* Initialised, and not yet operational: reported before advancing. */
+        report.payload = QIRAN_PAYLOAD_NON_OPERATIONAL;
+        report.health = svc_health_state();
+        for (i = 0U; i < COMM_HK_INTERLOCKS; i++) {
+            report.interlock[i] = COMM_INTERLOCK_UNEVALUATED;
+        }
+        report.fault = QIRAN_FAULT_NONE;
+        report.severity = QIRAN_SEV_MINOR;
+        (void)comm_rs485_status_send(&report);
+
         (void)mission_state_request(SPR_PRECOND);
     } else {
         /*

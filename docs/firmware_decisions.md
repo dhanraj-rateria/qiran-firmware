@@ -532,6 +532,72 @@ fourth attempt against a limit of three.
 
 ---
 
+## FW-31 — The housekeeping frame is sent whether or not the board can be read
+
+If the sampler that supplies rail voltages, temperatures and measured clocks is
+absent or fails, those fields are zeroed and the frame is sent anyway.
+
+**Why.** The frame's most important property is not the readings it carries but
+its arrival. The observer detects a lost payload by the absence of periodic
+communication, and that is one of the two supervisory paths the fault scheme
+relies on. Withholding the frame because a sensor is unreadable would trade a
+missing reading for an apparent loss of the whole payload, and would trigger the
+heavier recovery of the two.
+
+The absent or failing sampler is counted and reported in its own right, and
+stale readings are never left in place: the fields are re-zeroed on a failed
+sample rather than keeping the previous frame's values.
+
+---
+
+## FW-32 — Status is reported as formal parameter values
+
+Payload status, health status and the five interlocks are each sent as their own
+byte carrying an enumeration value, not as bits packed into a word.
+
+The requirements are explicit that which bit means what, the distance between
+valid codes, and complement verification by the observer are interface decisions
+belonging to whoever owns that document, not decisions to take here. One byte
+per parameter is the encoding that presumes least while still being a real
+frame; the packet identifier and layout are marked provisional.
+
+The interlocks carry a third value for not yet evaluated. Before the detector
+enable stage has run they have genuinely not been tested, and reporting either
+pass or fail for an untested interlock would be a false statement about the
+payload.
+
+---
+
+## FW-33 — A power-cycle request is a severe fault report, not its own frame
+
+The frame definition offers no packet for requesting a power cycle. Rather than
+invent one, the request is a status report carrying the causing fault at the
+severe tier.
+
+**OPEN:** confirm with the interface owner how a power-cycle request is to be
+distinguished from a severe fault report. Both mean the same thing to the
+payload; only the observer's reading of them differs.
+
+---
+
+## FW-34 — Frames are packed field by field, not by structure overlay
+
+Each field is written at a computed offset, most significant byte first. No
+structure is laid over the buffer.
+
+An overlay would make the wire format depend on the compiler's padding rules and
+the processor's byte order, so a change of either would silently change what
+goes on the link. Explicit packing makes the layout the same everywhere and
+makes the unit tests able to assert each field at the offset the frame
+definition gives it.
+
+Byte order itself is not stated in the frame definition. Most significant first
+follows the packet standard used on the other link, so both agree.
+
+**OPEN:** confirm byte order with the interface owner.
+
+---
+
 ## Additions not named in the module architecture
 
 These modules are not in the layer table and were added as implementation
