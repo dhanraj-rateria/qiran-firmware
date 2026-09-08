@@ -1,6 +1,9 @@
 #include "qiran/exec/exec_major.h"
 
 #include "qiran/comm/comm_cmd.h"
+#include "qiran/comm/comm_ccsds.h"
+#include "qiran/comm/comm_output.h"
+#include "qiran/comm/comm_spw_link.h"
 #include "qiran/comm/comm_rs485_hk.h"
 #include "qiran/exec/exec_core.h"
 #include "qiran/exec/exec_sched.h"
@@ -143,6 +146,20 @@ void major_cycle_tasks(void)
                (unsigned long)comm_cmd_failed(),
                (unsigned long)comm_cmd_resyncs(),
                (int)comm_cmd_in_progress());
+    xil_printf("  spw=%s errs=%lu disc=%lu tx=%lu rx=%lu word=%08lx\r\n",
+               comm_spw_link_state_name(comm_spw_link_state()),
+               (unsigned long)comm_spw_link_errors(),
+               (unsigned long)comm_spw_link_disconnects(),
+               (unsigned long)comm_spw_link_packets_sent(),
+               (unsigned long)comm_spw_link_packets_received(),
+               (unsigned long)comm_spw_link_status_word());
+    xil_printf("  out pend=%lu peak=%lu sent=%lu rej=%lu gaps=%lu bad=%lu\r\n",
+               (unsigned long)comm_output_pending(),
+               (unsigned long)comm_output_high_water(),
+               (unsigned long)comm_output_sent(),
+               (unsigned long)comm_output_rejected(),
+               (unsigned long)comm_ccsds_sequence_gaps(),
+               (unsigned long)comm_ccsds_integrity_errors());
     xil_printf("  cfg locked=%d changes=%lu rejected=%lu corrected=%lu cal=%d\r\n",
                (int)svc_config_locked(),
                (unsigned long)svc_config_changes(),

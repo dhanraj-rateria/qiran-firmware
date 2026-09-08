@@ -671,6 +671,85 @@ minor cycle and the true arrival lies within one cycle before the tag.
 
 ---
 
+## FW-39 — Identifier assignment is data, and routing is by class
+
+The application process identifier for each kind of packet is an interface
+decision, so the values sit in a table that can be set at initialisation rather
+than being constants compiled into the packet builder. Two classes are refused
+the same identifier, since routing by it would then be ambiguous, and the
+identifier the standard reserves for idle packets is refused outright.
+
+Routing is by class, not by identifier: consumers register against what a packet
+carries, so changing an identifier to match the interface document changes one
+table entry and nothing else.
+
+**File delivery has a class and routes, but no consumer.** The requirements mark
+it to be confirmed and ask that the rest be built so it can be added later
+without restructuring the router. Reserving its place is how that is honoured;
+a packet for it is counted as unroutable until something registers.
+
+---
+
+## FW-40 — A sequence gap is reported once and then adopted
+
+A count that is not the one expected means packets were lost. It is reported,
+and then the expectation is moved to follow what actually arrived.
+
+Continuing to expect the count that never came would report a gap on every
+subsequent packet, turning one loss into an unbounded stream of identical
+faults. One report per discontinuity is the useful signal.
+
+The check runs **after** the checksum, so a packet whose count was corrupted in
+transit is rejected as corrupt rather than counted as a loss. That ordering is
+tested, because the reverse would attribute a link error to missing data.
+
+---
+
+## FW-41 — The output queue is ordered by what a packet carries
+
+Fault and event data leaves first, then status, then processed results, then raw
+science and file data.
+
+The reason is the volume: raw science is the bulk of what leaves the payload,
+hundreds of megabits of it. Sent in arrival order it would sit ahead of every
+fault report and status frame queued behind it for as long as the transfer took,
+which is precisely when those are most worth having. Ordering by class costs one
+scan of a sixteen-entry table.
+
+Among equal priorities the earliest submission goes first, so ordering within a
+class is preserved.
+
+**The queue holds descriptors, not copies.** A buffer belongs to the queue until
+it has been sent and the producer must not touch it meanwhile, which is the same
+single-owner rule the data path uses. Copying instead would mean staging
+hundreds of megabits twice.
+
+A full queue refuses new work rather than discarding what it holds: data already
+computed is worth more than data not yet offered. The refusal is reported.
+
+---
+
+## FW-42 — The error status word is kept apart from the polled one
+
+The link's status is read each cycle, and its status at the moment of an error
+is kept separately.
+
+They were briefly the same variable, which meant the periodic read overwrote the
+snapshot: by the time anyone looked, the link had often recovered and the value
+that explained the error was gone. A test now asserts both survive.
+
+---
+
+## FW-43 — One command sequence, whichever link a command arrives on
+
+Commands may arrive framed on the housekeeping link or inside a space packet on
+the data link. Both paths converge on the same checking and dispatch sequence.
+
+Two sequences would mean two places for the legality rules to drift apart, and
+the one that mattered would be whichever link was used in anger.
+
+---
+
 ## Additions not named in the module architecture
 
 These modules are not in the layer table and were added as implementation

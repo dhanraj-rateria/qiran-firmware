@@ -39,7 +39,7 @@ STATE_SRC := test/host/test_state.c src/exec/exec_core.c src/plat/plat_cpu.c \
 HOST_BIN := $(BUILD)/test_exec $(BUILD)/test_irq $(BUILD)/test_fdir \
             $(BUILD)/test_boot $(BUILD)/test_sched $(BUILD)/test_config \
             $(BUILD)/test_state $(BUILD)/test_ops $(BUILD)/test_hk \
-            $(BUILD)/test_cmd
+            $(BUILD)/test_cmd $(BUILD)/test_spw
 
 ARM_CC   := arm-none-eabi-gcc
 ARM_SRC  := $(shell find src -name '*.c')
@@ -101,6 +101,16 @@ CMD_SRC := test/host/test_cmd.c src/comm/comm_cmd.c src/exec/exec_core.c \
 
 $(BUILD)/test_cmd: $(CMD_SRC) | $(BUILD)
 	@$(HOST_CC) $(WARN) -O1 -g $(HOST_INC) $(CMD_SRC) -o $@
+
+SPW_SRC := test/host/test_spw.c src/comm/comm_ccsds.c src/comm/comm_cmd.c \
+           src/comm/comm_output.c src/comm/comm_spw_link.c src/exec/exec_core.c \
+           src/mission/mission_state.c src/plat/plat_cpu.c src/plat/plat_gic.c \
+           src/plat/plat_isr_uart.c src/svc/svc_config.c src/svc/svc_crc.c \
+           src/svc/svc_fdir.c src/svc/svc_log.c src/svc/svc_ring.c \
+           src/svc/svc_time.c
+
+$(BUILD)/test_spw: $(SPW_SRC) | $(BUILD)
+	@$(HOST_CC) $(WARN) -O1 -g $(HOST_INC) $(SPW_SRC) -o $@
 
 syntax: | $(BUILD)
 	@for f in $(ARM_SRC); do \

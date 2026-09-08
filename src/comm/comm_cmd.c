@@ -301,6 +301,26 @@ static void process(const uint8_t *frame)
     dispatch(id, parameter, sequence, receipt_ms);
 }
 
+qiran_status_t comm_cmd_submit(const uint8_t *frame, uint32_t len)
+{
+    uint32_t stored;
+
+    if ((frame == NULL) || (len != COMM_CMD_FRAME_BYTES)) {
+        return QIRAN_ERR_PARAM;
+    }
+    if (frame[0] != COMM_CMD_PACKET_ID) {
+        return QIRAN_ERR_PARAM;
+    }
+
+    stored = comm_get_u32(frame, COMM_CMD_FRAME_BYTES - 4U);
+    if (stored != svc_crc32(frame, COMM_CMD_FRAME_BYTES - 4U)) {
+        return QIRAN_ERR_INTEGRITY;
+    }
+
+    process(frame);
+    return QIRAN_OK;
+}
+
 /*
  * Drops the leading byte, then any further bytes up to the next start marker,
  * so a frame corrupted or truncated on the link cannot desynchronise the

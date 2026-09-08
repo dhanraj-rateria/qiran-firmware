@@ -50,6 +50,7 @@ typedef enum {
     CFG_PVS_INTEGRATION_MS,
 
     CFG_HK_PERIOD_MS,
+    CFG_SPW_START_TIMEOUT_MS,
 
     SVC_CONFIG_PARAM_COUNT
 } svc_config_param_t;

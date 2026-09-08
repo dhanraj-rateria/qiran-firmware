@@ -59,7 +59,11 @@ static const svc_config_def_t k_def[SVC_CONFIG_PARAM_COUNT] = {
      * observer's absence-of-communication timeout, since that frame arriving is
      * what proves the payload is still executing.
      */
-    { "hk_period",           "ms",     100,  10000,  1000, true  }
+    { "hk_period",           "ms",     100,  10000,  1000, true  },
+
+    /* OPEN: no figure is given for how long the serial link may take to
+       come up. */
+    { "spw_start_timeout",   "ms",     100,  10000,  1000, true  }
 };
 
 QIRAN_STATIC_ASSERT(QIRAN_ARRAY_LEN(k_def) == (size_t)SVC_CONFIG_PARAM_COUNT,

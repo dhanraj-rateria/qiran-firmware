@@ -63,6 +63,12 @@ against `budget`, and `fits=0` is a design problem to act on before writing more
 code. `complete=1` means every task due every cycle has run, so the figures are
 real. A full task table follows every twentieth major cycle. See `docs/wcet.md`.
 
+The serial link line reports its bring-up state, error and disconnect counts,
+packets each way, and the current status word. `down` with rising attempts means
+the fabric side is not coming up; `failed` means the attempts were spent. The
+output line reports the queue depth and its peak, packets sent, refusals, and
+packet-level sequence gaps and checksum failures.
+
 The command line reports frames received, completed, rejected and failed, how
 many times framing had to resynchronise, and whether a command is still running.
 A rising `resync` with nothing received points at a link or framing problem

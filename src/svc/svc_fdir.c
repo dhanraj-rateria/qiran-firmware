@@ -64,6 +64,8 @@ static const svc_fdir_policy_t k_policy[QIRAN_FAULT_COUNT] = {
 
     /* SPW_LINK                */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       3U },
     /* PACKET_INTEGRITY        */ { QIRAN_SEV_MEDIUM,   QIRAN_ESCALATE_LOG_ONLY,     0U },
+    /* PACKET_SEQUENCE         */ { QIRAN_SEV_MEDIUM,   QIRAN_ESCALATE_LOG_ONLY,     0U },
+    /* OUTPUT_QUEUE            */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       5U },
     /* HK_SAMPLE               */ { QIRAN_SEV_MEDIUM,   QIRAN_ESCALATE_LOG_ONLY,     0U },
     /* HK_TRANSMIT             */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       5U },
     /* COMMAND_REJECTED        */ { QIRAN_SEV_MINOR,    QIRAN_ESCALATE_LOG_ONLY,     0U },

@@ -97,6 +97,13 @@ qiran_status_t comm_cmd_set_transmit(comm_cmd_tx_fn_t transmit, void *ctx);
 /* Assembles frames from the receive ring, then runs the command sequence. */
 void comm_cmd_service(void);
 
+/*
+ * Runs the command sequence on a frame that has already been delimited, which
+ * is how a command arriving inside a space packet is handled. Both links share
+ * one sequence rather than each having its own.
+ */
+qiran_status_t comm_cmd_submit(const uint8_t *frame, uint32_t len);
+
 const comm_cmd_def_t *comm_cmd_def(comm_cmd_id_t id);
 const char           *comm_cmd_result_name(comm_cmd_result_t result);
 bool                  comm_cmd_legal_in(comm_cmd_id_t id, mission_state_id_t state);
