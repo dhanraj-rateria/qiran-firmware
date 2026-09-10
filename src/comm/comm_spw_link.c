@@ -113,9 +113,13 @@ qiran_status_t comm_spw_link_send(const uint8_t *data, uint32_t len)
  * them costs one bounded pass through a queue rather than growing the
  * interrupt's own work.
  */
-static void drain_link_events(void)
+void comm_spw_link_service_interrupts(void)
 {
     plat_irq_event_t ev;
+
+    if (!s_ops_set) {
+        return;
+    }
 
     while (plat_irq_take(PLAT_IRQ_SPW, &ev)) {
         s_errors++;
@@ -150,8 +154,6 @@ void comm_spw_link_service(void)
     if (!s_ops_set) {
         return;
     }
-
-    drain_link_events();
 
     switch (s_state) {
     case SPW_LINK_DOWN:

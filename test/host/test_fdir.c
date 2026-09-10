@@ -295,6 +295,7 @@ static void test_interrupt_published_fault_is_drained(void)
     irq_handler(&s_slot[PLAT_IRQ_PL_ERROR]);
     irq_handler(&s_slot[PLAT_IRQ_PL_ERROR]);
 
+    svc_fdir_service_interrupts();
     error_handling_service();
 
     CHECK_EQ_U64(svc_fdir_occurrences(QIRAN_FAULT_PL_ERROR), 2U);
@@ -305,6 +306,7 @@ static void test_interrupt_published_fault_is_drained(void)
     for (i = 0U; i < (QIRAN_IRQ_QUEUE_DEPTH + 2U); i++) {
         irq_handler(&s_slot[PLAT_IRQ_PL_ERROR]);
     }
+    svc_fdir_service_interrupts();
     error_handling_service();
     CHECK_TRUE(svc_fdir_flag(QIRAN_FAULT_IRQ_OVERFLOW));
 }

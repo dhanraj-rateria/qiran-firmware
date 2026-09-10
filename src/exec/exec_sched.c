@@ -10,14 +10,17 @@
  * are collected on target rather than assembled by hand afterwards.
  */
 static const exec_task_def_t k_task[EXEC_TASK_COUNT] = {
-    { "state_machine",  EXEC_CYCLE_MINOR, 1U,                     0U, 0U },
-    { "health",         EXEC_CYCLE_MINOR, 1U,                     0U, 0U },
-    { "control_loops",  EXEC_CYCLE_MINOR, 1U,                     0U, 0U },
-    { "data_path",      EXEC_CYCLE_MINOR, 1U,                     0U, 0U },
-    { "comms",          EXEC_CYCLE_MINOR, 1U,                     0U, 0U },
-    { "fdir",           EXEC_CYCLE_MINOR, 1U,                     0U, 0U },
-    { "watchdog",       EXEC_CYCLE_MINOR, 1U,                     0U, 0U },
-    { "major",          EXEC_CYCLE_MAJOR, QIRAN_MINOR_PER_MAJOR,  0U, 0U }
+    { "interrupts",   EXEC_CYCLE_MINOR, 1U,                    0U, 0U },
+    { "health_check", EXEC_CYCLE_MINOR, 1U,                    0U, 0U },
+    { "comms",        EXEC_CYCLE_MINOR, 1U,                    0U, 0U },
+    { "telecommand",  EXEC_CYCLE_MINOR, 1U,                    0U, 0U },
+    { "pl_control",   EXEC_CYCLE_MINOR, 1U,                    0U, 0U },
+    { "data_path",    EXEC_CYCLE_MINOR, 1U,                    0U, 0U },
+    { "fdir",         EXEC_CYCLE_MINOR, 1U,                    0U, 0U },
+    { "health_final", EXEC_CYCLE_MINOR, 1U,                    0U, 0U },
+    { "telemetry",    EXEC_CYCLE_MINOR, 1U,                    0U, 0U },
+    { "major",        EXEC_CYCLE_MAJOR, QIRAN_MINOR_PER_MAJOR, 0U, 0U },
+    { "watchdog",     EXEC_CYCLE_MINOR, 1U,                    0U, 0U }
 };
 
 QIRAN_STATIC_ASSERT(QIRAN_ARRAY_LEN(k_task) == (size_t)EXEC_TASK_COUNT,

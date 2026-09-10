@@ -9,17 +9,17 @@
 
 #define ST(s) ((uint32_t)1U << (uint32_t)(s))
 
-#define ANY_STATE  (ST(SPR_COUNT) - 1U)
-#define EARLY_ONLY (ST(SPR_BOOT) | ST(SPR_PRECOND))
+#define ANY_STAGE  (ST(STAGE_COUNT) - 1U)
+#define EARLY_ONLY (ST(STAGE_BOOT) | ST(STAGE_PRECOND))
 
 static const comm_cmd_def_t k_cmd[COMM_CMD_COUNT] = {
     { "payload_on",        EARLY_ONLY, false, 0, 0,     2000U },
     { "processor_on",      EARLY_ONLY, false, 0, 0,     2000U },
-    { "payload_off",       ANY_STATE,  false, 0, 0,     2000U },
+    { "payload_off",       ANY_STAGE,  false, 0, 0,     2000U },
     { "laser_on",          EARLY_ONLY, false, 0, 0,     5000U },
-    { "laser_off",         ANY_STATE,  false, 0, 0,     1000U },
+    { "laser_off",         ANY_STAGE,  false, 0, 0,     1000U },
     { "heaters_on",        EARLY_ONLY, false, 0, 0,     2000U },
-    { "heaters_off",       ANY_STATE,  false, 0, 0,     1000U },
+    { "heaters_off",       ANY_STAGE,  false, 0, 0,     1000U },
     /*
      * Exactly one operating mode exists, so the only mode a mode command can
      * select is the one already running, and selecting it is a no-op that
@@ -29,15 +29,15 @@ static const comm_cmd_def_t k_cmd[COMM_CMD_COUNT] = {
      * OPEN: what else a mode command is intended to do, since its effect is
      * left blank in the telecommand list.
      */
-    { "mode",              ANY_STATE,  true,  0, 0,     1000U },
-    { "processor_reset",   ANY_STATE,  false, 0, 0,     1000U },
-    { "power_on_reset",    ANY_STATE,  false, 0, 0,     1000U },
-    { "flight_mode_reset", ANY_STATE,  false, 0, 0,     1000U }
+    { "mode",              ANY_STAGE,  true,  0, 0,     1000U },
+    { "processor_reset",   ANY_STAGE,  false, 0, 0,     1000U },
+    { "power_on_reset",    ANY_STAGE,  false, 0, 0,     1000U },
+    { "flight_mode_reset", ANY_STAGE,  false, 0, 0,     1000U }
 };
 
 QIRAN_STATIC_ASSERT(QIRAN_ARRAY_LEN(k_cmd) == (size_t)COMM_CMD_COUNT,
                     every_command_is_defined);
-QIRAN_STATIC_ASSERT(SPR_COUNT < 32, state_mask_covers_every_state);
+QIRAN_STATIC_ASSERT(STAGE_COUNT < 32, stage_mask_covers_every_stage);
 
 static comm_cmd_handler_t s_handler[COMM_CMD_COUNT];
 static void              *s_ctx[COMM_CMD_COUNT];
@@ -127,12 +127,12 @@ const comm_cmd_def_t *comm_cmd_def(comm_cmd_id_t id)
     return (id < COMM_CMD_COUNT) ? &k_cmd[id] : NULL;
 }
 
-bool comm_cmd_legal_in(comm_cmd_id_t id, mission_state_id_t state)
+bool comm_cmd_legal_in(comm_cmd_id_t id, mission_stage_t stage)
 {
-    if ((id >= COMM_CMD_COUNT) || (state >= SPR_COUNT)) {
+    if ((id >= COMM_CMD_COUNT) || (stage >= STAGE_COUNT)) {
         return false;
     }
-    return (k_cmd[id].state_mask & ST(state)) != 0U;
+    return (k_cmd[id].stage_mask & ST(stage)) != 0U;
 }
 
 const char *comm_cmd_result_name(comm_cmd_result_t result)
@@ -282,9 +282,9 @@ static void process(const uint8_t *frame)
         return;
     }
 
-    if (!comm_cmd_legal_in(id, mission_state_current())) {
+    if (!comm_cmd_legal_in(id, mission_stage())) {
         reject(raw_id, sequence, receipt_ms, COMM_CMD_REJECT_STATE,
-               (uint32_t)mission_state_current());
+               (uint32_t)mission_stage());
         return;
     }
 
@@ -422,22 +422,20 @@ static void track(void)
     }
 }
 
-void comm_cmd_service(void)
+void comm_cmd_service_interrupts(void)
 {
     plat_irq_event_t ev;
 
-    /*
-     * An idle gap on the link marks a frame boundary, so a partially received
-     * frame is abandoned rather than being completed by the bytes of the next
-     * one.
-     */
     while (plat_isr_uart_take(&ev)) {
         if ((ev.kind == PLAT_UART_KIND_GAP) && (s_asm_len != 0U)) {
             s_asm_len = 0U;
             s_resyncs++;
         }
     }
+}
 
+void comm_cmd_service(void)
+{
     track();
     assemble();
 }

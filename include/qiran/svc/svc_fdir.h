@@ -47,6 +47,9 @@ qiran_status_t svc_fdir_set_uplink(const svc_fdir_uplink_t *uplink);
  */
 void svc_fdir_report(qiran_fault_id_t id, uint32_t detail);
 
+/* Collects faults the interrupts published. */
+void svc_fdir_service_interrupts(void);
+
 /*
  * Classifies everything reported since the previous call, escalates what has
  * reached its limit, and collects the fault counters owned by the platform.

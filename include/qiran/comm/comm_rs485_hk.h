@@ -79,8 +79,16 @@ qiran_status_t comm_rs485_status_build(const comm_status_report_t *report,
                                        uint8_t *buf, uint32_t len,
                                        uint32_t *written);
 
-/* Sends the housekeeping frame on its configured interval. */
-void comm_rs485_hk_service(void);
+/*
+ * Builds the housekeeping frame into its buffer when the interval is due.
+ * Separated from sending it so that filling the buffer costs the same every
+ * time and never waits on a link, and so a link that is down or slow cannot
+ * hold up the cycle.
+ */
+void comm_rs485_hk_stage(void);
+
+/* Sends whatever is staged, if the link will take it. */
+void comm_rs485_hk_transmit(void);
 
 /* Sends a status report immediately, outside the periodic interval. */
 qiran_status_t comm_rs485_status_send(const comm_status_report_t *report);

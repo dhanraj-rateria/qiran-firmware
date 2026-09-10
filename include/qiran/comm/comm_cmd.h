@@ -1,7 +1,7 @@
 #ifndef QIRAN_COMM_CMD_H
 #define QIRAN_COMM_CMD_H
 
-#include "qiran/mission/mission_state.h"
+#include "qiran/mission/mission_seq.h"
 #include "qiran/qiran_types.h"
 
 /*
@@ -69,19 +69,19 @@ typedef qiran_status_t (*comm_cmd_tx_fn_t)(void *ctx, const uint8_t *data,
 typedef struct {
     const char *name;
     /*
-     * States the command may be given in, one bit per state.
+     * Stages the command may be given in, one bit per stage.
      *
      * OPEN: which commands may override a stage already in progress is an
      * unanswered design question. Pending an answer these masks follow a
      * conservative rule that is stated rather than assumed: a command that
-     * removes energy from the payload is accepted in any state, because
+     * removes energy from the payload is accepted at any stage, because
      * refusing to turn something off is never the safer choice; a command that
      * applies energy is accepted only before the sequence has committed to an
      * optical configuration, because applying it later would contradict the
-     * stage that owns that hardware; and the reset commands are accepted in any
-     * state, because recovery has to work when things are already wrong.
+     * stage that owns that hardware; and the reset commands are accepted at any
+     * stage, because recovery has to work when things are already wrong.
      */
-    uint32_t state_mask;
+    uint32_t stage_mask;
     bool     takes_parameter;
     int32_t  param_min;
     int32_t  param_max;
@@ -93,6 +93,12 @@ void comm_cmd_init(void);
 qiran_status_t comm_cmd_register(comm_cmd_id_t id, comm_cmd_handler_t handler,
                                  void *ctx);
 qiran_status_t comm_cmd_set_transmit(comm_cmd_tx_fn_t transmit, void *ctx);
+
+/*
+ * An idle gap on the link marks a frame boundary, so a partly received frame
+ * is abandoned rather than completed by the bytes of the next one.
+ */
+void comm_cmd_service_interrupts(void);
 
 /* Assembles frames from the receive ring, then runs the command sequence. */
 void comm_cmd_service(void);
@@ -106,7 +112,7 @@ qiran_status_t comm_cmd_submit(const uint8_t *frame, uint32_t len);
 
 const comm_cmd_def_t *comm_cmd_def(comm_cmd_id_t id);
 const char           *comm_cmd_result_name(comm_cmd_result_t result);
-bool                  comm_cmd_legal_in(comm_cmd_id_t id, mission_state_id_t state);
+bool                  comm_cmd_legal_in(comm_cmd_id_t id, mission_stage_t stage);
 
 /* Builds a command frame. Present so a bench sender and the tests agree. */
 qiran_status_t comm_cmd_build(comm_cmd_id_t id, uint32_t parameter,

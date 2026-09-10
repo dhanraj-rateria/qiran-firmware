@@ -10,7 +10,7 @@
 #include "qiran/comm/comm_output.h"
 #include "qiran/comm/comm_spw_link.h"
 #include "qiran/exec/exec_core.h"
-#include "qiran/mission/mission_state.h"
+#include "qiran/mission/mission_seq.h"
 #include "qiran/plat/plat_cpu.h"
 #include "qiran/svc/svc_config.h"
 #include "qiran/svc/svc_crc.h"
@@ -96,7 +96,7 @@ static void setup(void)
     svc_fdir_init();
     svc_config_init();
     svc_time_init();
-    mission_state_init();
+    mission_seq_init();
     comm_cmd_init();
     comm_ccsds_init();
     comm_spw_link_init();
@@ -561,7 +561,7 @@ static void test_link_errors_from_interrupt(void)
         slot->head = 1U;
     }
 
-    comm_spw_link_service();
+    comm_spw_link_service_interrupts();
     error_handling_service();
 
     CHECK_EQ_U64(comm_spw_link_errors(), 1U);

@@ -12,14 +12,17 @@
  * a pointer stored in a table.
  */
 typedef enum {
-    EXEC_TASK_STATE_MACHINE = 0,
-    EXEC_TASK_HEALTH,
-    EXEC_TASK_CONTROL_LOOPS,
-    EXEC_TASK_DATA_PATH,
+    EXEC_TASK_INTERRUPTS = 0,
+    EXEC_TASK_HEALTH_CHECK,
     EXEC_TASK_COMMS,
+    EXEC_TASK_TELECOMMAND,
+    EXEC_TASK_PL_CONTROL,
+    EXEC_TASK_DATA_PATH,
     EXEC_TASK_FDIR,
-    EXEC_TASK_WATCHDOG,
+    EXEC_TASK_HEALTH_CONSOLIDATE,
+    EXEC_TASK_TELEMETRY,
     EXEC_TASK_MAJOR,
+    EXEC_TASK_WATCHDOG,
     EXEC_TASK_COUNT
 } exec_task_id_t;
 
@@ -84,11 +87,15 @@ void exec_sched_check(exec_sched_check_t *out);
  * written out at the call site, so the loop still reads as a fixed sequence of
  * calls in a fixed order.
  */
+#if QIRAN_INSTRUMENT
 #define EXEC_RUN(id, call)     \
     do {                       \
         exec_task_enter(id);   \
         call;                  \
         exec_task_leave(id);   \
     } while (0)
+#else
+#define EXEC_RUN(id, call) do { call; } while (0)
+#endif
 
 #endif

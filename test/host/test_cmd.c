@@ -8,7 +8,7 @@
 #include "qiran/comm/comm_bytes.h"
 #include "qiran/comm/comm_cmd.h"
 #include "qiran/exec/exec_core.h"
-#include "qiran/mission/mission_state.h"
+#include "qiran/mission/mission_seq.h"
 #include "qiran/plat/plat_cpu.h"
 #include "qiran/plat/plat_isr_uart.h"
 #include "qiran/svc/svc_config.h"
@@ -122,7 +122,7 @@ static void setup(void)
     svc_fdir_init();
     svc_config_init();
     svc_time_init();
-    mission_state_init();
+    mission_seq_init();
     comm_cmd_init();
 
     memset(s_calls, 0, sizeof(s_calls));
@@ -142,22 +142,25 @@ static void setup(void)
     (void)comm_cmd_set_transmit(out_tx, NULL);
 }
 
-static void advance_to(mission_state_id_t target)
+static void step_done(void *ctx, mission_step_t *out)
 {
-    static const mission_state_id_t k_path[] = {
-        SPR_PRECOND, SPR_LASER_BRINGUP, SPR_MRR_TUNE, SPR_CROW_TUNE,
-        SPR_UMZI_TUNE, SPR_DLI_LOCK, SPR_SPAD_ENABLE, SPR_PVS_T1,
-        SPR_EXPERIMENT
-    };
+    QIRAN_UNUSED(ctx);
+    out->result = STEP_DONE;
+}
+
+/* Walks the sequence forward by letting each stage finish immediately. */
+static void advance_to(mission_stage_t target)
+{
+    uint32_t guard = 0U;
     uint32_t i;
 
-    for (i = 0U; i < QIRAN_ARRAY_LEN(k_path); i++) {
-        if (mission_state_current() == target) {
-            return;
-        }
-        if (mission_state_request(k_path[i]) != QIRAN_OK) {
-            return;
-        }
+    for (i = 0U; i < (uint32_t)STAGE_COUNT; i++) {
+        (void)mission_seq_register((mission_stage_t)i, step_done, NULL);
+    }
+
+    while ((mission_stage() != target) && (guard <= (uint32_t)STAGE_COUNT)) {
+        mission_seq_step();
+        guard++;
     }
 }
 
@@ -191,32 +194,32 @@ static void test_command_table(void)
     CHECK_TRUE(comm_cmd_def(COMM_CMD_COUNT) == NULL);
 
     TEST_CASE("a command that removes energy is accepted in every state");
-    for (i = 0U; i < (uint32_t)SPR_COUNT; i++) {
-        CHECK_TRUE(comm_cmd_legal_in(CMD_LASER_OFF, (mission_state_id_t)i));
-        CHECK_TRUE(comm_cmd_legal_in(CMD_HEATERS_OFF, (mission_state_id_t)i));
-        CHECK_TRUE(comm_cmd_legal_in(CMD_PAYLOAD_OFF, (mission_state_id_t)i));
+    for (i = 0U; i < (uint32_t)STAGE_COUNT; i++) {
+        CHECK_TRUE(comm_cmd_legal_in(CMD_LASER_OFF, (mission_stage_t)i));
+        CHECK_TRUE(comm_cmd_legal_in(CMD_HEATERS_OFF, (mission_stage_t)i));
+        CHECK_TRUE(comm_cmd_legal_in(CMD_PAYLOAD_OFF, (mission_stage_t)i));
     }
 
     TEST_CASE("a reset is accepted in every state, since recovery must work");
-    for (i = 0U; i < (uint32_t)SPR_COUNT; i++) {
-        CHECK_TRUE(comm_cmd_legal_in(CMD_PROCESSOR_RESET, (mission_state_id_t)i));
-        CHECK_TRUE(comm_cmd_legal_in(CMD_POWER_ON_RESET, (mission_state_id_t)i));
+    for (i = 0U; i < (uint32_t)STAGE_COUNT; i++) {
+        CHECK_TRUE(comm_cmd_legal_in(CMD_PROCESSOR_RESET, (mission_stage_t)i));
+        CHECK_TRUE(comm_cmd_legal_in(CMD_POWER_ON_RESET, (mission_stage_t)i));
         CHECK_TRUE(comm_cmd_legal_in(CMD_FLIGHT_MODE_RESET,
-                                     (mission_state_id_t)i));
+                                     (mission_stage_t)i));
     }
 
     TEST_CASE("a command that applies energy is accepted only before the "
               "sequence commits");
-    CHECK_TRUE(comm_cmd_legal_in(CMD_LASER_ON, SPR_BOOT));
-    CHECK_TRUE(comm_cmd_legal_in(CMD_LASER_ON, SPR_PRECOND));
-    CHECK_TRUE(!comm_cmd_legal_in(CMD_LASER_ON, SPR_MRR_TUNE));
-    CHECK_TRUE(!comm_cmd_legal_in(CMD_LASER_ON, SPR_EXPERIMENT));
-    CHECK_TRUE(!comm_cmd_legal_in(CMD_HEATERS_ON, SPR_EXPERIMENT));
-    CHECK_TRUE(!comm_cmd_legal_in(CMD_PAYLOAD_ON, SPR_EXPERIMENT));
+    CHECK_TRUE(comm_cmd_legal_in(CMD_LASER_ON, STAGE_BOOT));
+    CHECK_TRUE(comm_cmd_legal_in(CMD_LASER_ON, STAGE_PRECOND));
+    CHECK_TRUE(!comm_cmd_legal_in(CMD_LASER_ON, STAGE_MRR_TUNE));
+    CHECK_TRUE(!comm_cmd_legal_in(CMD_LASER_ON, STAGE_EXPERIMENT));
+    CHECK_TRUE(!comm_cmd_legal_in(CMD_HEATERS_ON, STAGE_EXPERIMENT));
+    CHECK_TRUE(!comm_cmd_legal_in(CMD_PAYLOAD_ON, STAGE_EXPERIMENT));
 
     TEST_CASE("out-of-range identifiers are not legal anywhere");
-    CHECK_TRUE(!comm_cmd_legal_in(COMM_CMD_COUNT, SPR_BOOT));
-    CHECK_TRUE(!comm_cmd_legal_in(CMD_LASER_OFF, SPR_COUNT));
+    CHECK_TRUE(!comm_cmd_legal_in(COMM_CMD_COUNT, STAGE_BOOT));
+    CHECK_TRUE(!comm_cmd_legal_in(CMD_LASER_OFF, STAGE_COUNT));
 }
 
 static void test_frame_build(void)
@@ -253,7 +256,7 @@ static void test_accepted_command(void)
     TEST_CASE("a well formed, legal command reaches its handler and completes");
     setup();
     register_handler(CMD_LASER_OFF);
-    advance_to(SPR_EXPERIMENT);
+    advance_to(STAGE_EXPERIMENT);
 
     send_cmd(CMD_LASER_OFF, 0xABCDU, 0x0007U);
 
@@ -340,18 +343,18 @@ static void test_state_rejection(void)
     TEST_CASE("a command not legal in the current state is refused");
     setup();
     register_handler(CMD_LASER_ON);
-    advance_to(SPR_EXPERIMENT);
+    advance_to(STAGE_EXPERIMENT);
 
     send_cmd(CMD_LASER_ON, 0U, 5U);
 
     CHECK_EQ_U64(s_calls[CMD_LASER_ON], 0U);
     CHECK_EQ_U64(s_out[OFF_R_RESULT], COMM_CMD_REJECT_STATE);
-    CHECK_EQ_U64(comm_get_u32(s_out, OFF_R_DETAIL), SPR_EXPERIMENT);
+    CHECK_EQ_U64(comm_get_u32(s_out, OFF_R_DETAIL), STAGE_EXPERIMENT);
 
     TEST_CASE("the same command is accepted where the table allows it");
     setup();
     register_handler(CMD_LASER_ON);
-    CHECK_EQ_U64(mission_state_current(), SPR_BOOT);
+    CHECK_EQ_U64(mission_stage(), STAGE_BOOT);
 
     send_cmd(CMD_LASER_ON, 0U, 6U);
     CHECK_EQ_U64(s_calls[CMD_LASER_ON], 1U);

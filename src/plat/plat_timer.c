@@ -41,17 +41,21 @@ static volatile uint32_t s_isr_cycles_worst;
 
 static void timer_isr(void *ref)
 {
+#if QIRAN_INSTRUMENT
     uint32_t start = plat_cpu_cycle_count();
     uint32_t elapsed;
+#endif
 
     XScuTimer_ClearInterruptStatus((XScuTimer *)ref);
     exec_on_minor_tick();
 
+#if QIRAN_INSTRUMENT
     elapsed = plat_cpu_cycle_count() - start;
     s_isr_cycles_last = elapsed;
     if (elapsed > s_isr_cycles_worst) {
         s_isr_cycles_worst = elapsed;
     }
+#endif
 }
 
 qiran_status_t plat_timer_init(void)

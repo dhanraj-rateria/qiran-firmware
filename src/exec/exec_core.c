@@ -10,8 +10,11 @@
  * critical section to collect one.
  */
 static volatile uint32_t s_isr_ticks;
+static volatile uint32_t s_isr_majors;
+static uint8_t           s_isr_position;
 
 static uint32_t s_consumed;
+static uint32_t s_consumed_majors;
 static uint64_t s_elapsed_minor;
 static uint32_t s_slot;
 static uint64_t s_major_cycles;
@@ -26,35 +29,25 @@ static uint32_t s_overrun_events;
 static uint32_t s_overrun_lost;
 static uint32_t s_overrun_worst;
 
-static bool advance(uint32_t pending)
+static void advance(uint32_t pending)
 {
-    bool crossed = false;
+    uint32_t slot = s_slot + pending;
 
-    if (pending == 1U) {
-        s_slot++;
-        if (s_slot >= QIRAN_MINOR_PER_MAJOR) {
-            s_slot = 0U;
-            crossed = true;
-        }
-    } else {
-        uint32_t i;
-        for (i = 0U; i < pending; i++) {
-            s_slot++;
-            if (s_slot >= QIRAN_MINOR_PER_MAJOR) {
-                s_slot = 0U;
-                crossed = true;
-            }
-        }
+    while (slot >= QIRAN_MINOR_PER_MAJOR) {
+        slot -= QIRAN_MINOR_PER_MAJOR;
     }
 
+    s_slot = slot;
     s_elapsed_minor += (uint64_t)pending;
-    return crossed;
 }
 
 void exec_init(void)
 {
     s_isr_ticks = 0U;
+    s_isr_majors = 0U;
+    s_isr_position = 0U;
     s_consumed = 0U;
+    s_consumed_majors = 0U;
     s_elapsed_minor = 0U;
     s_slot = 0U;
     s_major_cycles = 0U;
@@ -73,14 +66,21 @@ void exec_init(void)
 void exec_on_minor_tick(void)
 {
     s_isr_ticks++;
+
+    s_isr_position++;
+    if (s_isr_position >= QIRAN_MINOR_PER_MAJOR) {
+        s_isr_position = 0U;
+        s_isr_majors++;
+    }
 }
 
 void exec_resync(void)
 {
     uint32_t raw = s_isr_ticks;
 
-    (void)advance(raw - s_consumed);
+    advance(raw - s_consumed);
     s_consumed = raw;
+    s_consumed_majors = s_isr_majors;
     s_major_due = false;
 
     s_body_start = plat_cpu_cycle_count();
@@ -127,10 +127,21 @@ void exec_wait_for_minor_tick(void)
     }
 
     s_consumed = raw;
+    advance(pending);
 
-    if (advance(pending)) {
-        s_major_due = true;
-        s_major_cycles++;
+    /*
+     * The major boundary is counted by the interrupt, so an overrun that
+     * carries the loop past it still sees it: the count differs whether or not
+     * the loop was there when it happened.
+     */
+    {
+        uint32_t majors = s_isr_majors;
+
+        if (majors != s_consumed_majors) {
+            s_consumed_majors = majors;
+            s_major_due = true;
+            s_major_cycles++;
+        }
     }
 
     s_body_start = plat_cpu_cycle_count();

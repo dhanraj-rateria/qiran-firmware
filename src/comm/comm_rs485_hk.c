@@ -1,7 +1,7 @@
 #include "qiran/comm/comm_rs485_hk.h"
 
 #include "qiran/comm/comm_bytes.h"
-#include "qiran/mission/mission_state.h"
+#include "qiran/mission/mission_seq.h"
 #include "qiran/qiran_config.h"
 #include "qiran/svc/svc_config.h"
 #include "qiran/svc/svc_crc.h"
@@ -25,7 +25,8 @@ static uint32_t s_sample_failures;
 static uint64_t s_last_attempt_ms;
 static bool     s_attempted;
 
-static uint8_t s_frame[COMM_HK_FRAME_BYTES];
+static uint8_t  s_frame[COMM_HK_FRAME_BYTES];
+static uint32_t s_staged;
 static uint8_t s_status[COMM_HK_STATUS_BYTES];
 
 void comm_rs485_hk_init(void)
@@ -42,6 +43,7 @@ void comm_rs485_hk_init(void)
     s_sample_failures = 0U;
     s_last_attempt_ms = 0U;
     s_attempted = false;
+    s_staged = 0U;
 
     for (i = 0U; i < COMM_HK_INTERLOCKS; i++) {
         s_interlock[i] = COMM_INTERLOCK_UNEVALUATED;
@@ -225,7 +227,7 @@ static qiran_status_t transmit(const uint8_t *data, uint32_t len)
     return st;
 }
 
-void comm_rs485_hk_service(void)
+void comm_rs485_hk_stage(void)
 {
     uint64_t now = svc_time_now_ms();
     uint32_t period = (uint32_t)svc_config_get(CFG_HK_PERIOD_MS);
@@ -241,19 +243,33 @@ void comm_rs485_hk_service(void)
     }
 
     /*
-     * Marked before sending, so a link that keeps refusing is retried on the
+     * Marked before building, so a link that keeps refusing is retried on the
      * interval rather than on every cycle.
      */
     s_last_attempt_ms = now;
     s_attempted = true;
 
-    if (comm_rs485_hk_build(s_frame, sizeof(s_frame), &written) != QIRAN_OK) {
+    if (comm_rs485_hk_build(s_frame, sizeof(s_frame), &written) == QIRAN_OK) {
+        s_staged = written;
+    }
+}
+
+void comm_rs485_hk_transmit(void)
+{
+    if (s_staged == 0U) {
         return;
     }
 
-    if (transmit(s_frame, written) == QIRAN_OK) {
+    if (transmit(s_frame, s_staged) == QIRAN_OK) {
         s_frames++;
     }
+
+    /*
+     * Dropped whether or not it went. The next frame carries current readings,
+     * and holding a stale one back would delay those to re-send measurements
+     * already superseded.
+     */
+    s_staged = 0U;
 }
 
 qiran_status_t comm_rs485_status_send(const comm_status_report_t *report)

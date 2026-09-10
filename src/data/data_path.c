@@ -1,7 +1,7 @@
 #include "qiran/data/data_path.h"
 
 #include "qiran/data/storage_nand.h"
-#include "qiran/mission/mission_state.h"
+#include "qiran/mission/mission_seq.h"
 #include "qiran/plat/plat_irq.h"
 #include "qiran/svc/svc_fdir.h"
 
@@ -109,19 +109,22 @@ bool data_path_transfer_done(void)
     return storage_nand_transfer_complete();
 }
 
-void data_path_manage(void)
+void data_path_service_interrupts(void)
 {
     plat_irq_event_t ev;
 
     while (plat_irq_take(PLAT_IRQ_DMA, &ev)) {
         complete(ev.datum);
     }
+}
 
+void data_path_manage(void)
+{
     /*
-     * The transfer runs only in the state that owns it, so a run's data cannot
+     * The transfer runs only at the stage that owns it, so a run's data cannot
      * start leaving before the run has finished being reduced.
      */
-    if (mission_state_current() == SPR_DATA_HANDLING) {
+    if (mission_stage() == STAGE_DATA_HANDLING) {
         storage_nand_transfer_service();
     }
 }

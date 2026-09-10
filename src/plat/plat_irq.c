@@ -47,11 +47,13 @@ static const char *const k_name[PLAT_IRQ_COUNT] = {
 static void irq_handler(void *ref)
 {
     irq_slot_t *s = (irq_slot_t *)ref;
-    uint32_t start = plat_cpu_cycle_count();
     uint32_t head;
-    uint32_t elapsed;
     uint16_t kind = 0U;
     uint32_t datum;
+#if QIRAN_INSTRUMENT
+    uint32_t start = plat_cpu_cycle_count();
+    uint32_t elapsed;
+#endif
 
     datum = s->src.ack(s->src.ctx, &kind);
 
@@ -74,11 +76,13 @@ static void irq_handler(void *ref)
     /* Advanced even on drop, so a consumer sees the discontinuity. */
     s->seq++;
 
+#if QIRAN_INSTRUMENT
     elapsed = plat_cpu_cycle_count() - start;
     s->cycles_last = elapsed;
     if (elapsed > s->cycles_worst) {
         s->cycles_worst = elapsed;
     }
+#endif
 }
 
 void plat_irq_init(void)

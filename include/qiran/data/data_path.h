@@ -9,6 +9,10 @@
  * completion, and driving the transfer out.
  */
 void data_path_init(void);
+
+/* Takes over the buffers the fabric reported finished. */
+void data_path_service_interrupts(void);
+
 void data_path_manage(void);
 
 /*

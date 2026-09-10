@@ -31,7 +31,10 @@ void comm_spw_link_init(void);
 
 qiran_status_t comm_spw_link_set_ops(const comm_spw_ops_t *ops);
 
-/* Drives the bring-up, collects link errors, and delivers received packets. */
+/* Collects the errors the interrupt published. */
+void comm_spw_link_service_interrupts(void);
+
+/* Drives the bring-up and delivers received packets. */
 void comm_spw_link_service(void);
 
 comm_spw_state_t comm_spw_link_state(void);

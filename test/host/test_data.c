@@ -12,7 +12,7 @@
 #include "qiran/data/storage_ddr.h"
 #include "qiran/data/storage_nand.h"
 #include "qiran/exec/exec_core.h"
-#include "qiran/mission/mission_state.h"
+#include "qiran/mission/mission_seq.h"
 #include "qiran/plat/plat_cpu.h"
 #include "qiran/svc/svc_config.h"
 #include "qiran/svc/svc_crc.h"
@@ -129,7 +129,7 @@ static void setup(void)
     svc_fdir_init();
     svc_config_init();
     svc_time_init();
-    mission_state_init();
+    mission_seq_init();
     comm_ccsds_init();
     comm_spw_link_init();
     comm_output_init();
@@ -165,6 +165,28 @@ static void setup(void)
     k_nand_ops.capacity_bytes = (uint32_t)sizeof(s_flash);
     k_nand_ops.ctx = NULL;
     CHECK_TRUE(storage_nand_set_ops(&k_nand_ops) == QIRAN_OK);
+}
+
+static void step_done(void *ctx, mission_step_t *out)
+{
+    QIRAN_UNUSED(ctx);
+    out->result = STEP_DONE;
+}
+
+/* Walks the sequence forward by letting each stage finish immediately. */
+static void advance_to(mission_stage_t target)
+{
+    uint32_t guard = 0U;
+    uint32_t i;
+
+    for (i = 0U; i < (uint32_t)STAGE_COUNT; i++) {
+        (void)mission_seq_register((mission_stage_t)i, step_done, NULL);
+    }
+
+    while ((mission_stage() != target) && (guard <= (uint32_t)STAGE_COUNT)) {
+        mission_seq_step();
+        guard++;
+    }
 }
 
 static void bring_up_link(void)
@@ -314,6 +336,7 @@ static void test_completion_hands_the_buffer_over(void)
     CHECK_TRUE(data_path_arm(0U) == QIRAN_OK);
 
     publish_dma((uint32_t)DDR_REGION_RAW_CH0_A);
+    data_path_service_interrupts();
     data_path_manage();
 
     CHECK_EQ_U64(data_path_completions(), 1U);
@@ -330,6 +353,7 @@ static void test_completion_hands_the_buffer_over(void)
     TEST_CASE("a completion for a buffer the fabric did not own is refused");
     setup();
     publish_dma((uint32_t)DDR_REGION_RAW_CH1_A);
+    data_path_service_interrupts();
     data_path_manage();
 
     CHECK_EQ_U64(data_path_completions(), 0U);
@@ -342,6 +366,7 @@ static void test_completion_hands_the_buffer_over(void)
     CHECK_TRUE(data_path_arm(1U) == QIRAN_OK);
     publish_dma((uint32_t)DDR_REGION_RAW_CH1_A);
     publish_dma((uint32_t)DDR_REGION_RAW_CH0_A);
+    data_path_service_interrupts();
     data_path_manage();
 
     CHECK_EQ_U64(data_path_ready_slots(), 2U);
@@ -727,19 +752,8 @@ static void test_transfer_runs_only_in_its_state(void)
     CHECK_EQ_U64(storage_nand_transferred(), 0U);
 
     TEST_CASE("it does once the run is there");
-    {
-        static const mission_state_id_t k_path[] = {
-            SPR_PRECOND, SPR_LASER_BRINGUP, SPR_MRR_TUNE, SPR_CROW_TUNE,
-            SPR_UMZI_TUNE, SPR_DLI_LOCK, SPR_SPAD_ENABLE, SPR_PVS_T1,
-            SPR_EXPERIMENT, SPR_PROCESS, SPR_DATA_HANDLING
-        };
-        uint32_t i;
-
-        for (i = 0U; i < QIRAN_ARRAY_LEN(k_path); i++) {
-            CHECK_TRUE(mission_state_request(k_path[i]) == QIRAN_OK);
-        }
-    }
-    CHECK_EQ_U64(mission_state_current(), SPR_DATA_HANDLING);
+    advance_to(STAGE_DATA_HANDLING);
+    CHECK_EQ_U64(mission_stage(), STAGE_DATA_HANDLING);
 
     data_path_manage();
     CHECK_EQ_U64(storage_nand_transferred(), 1U);

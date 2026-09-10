@@ -42,8 +42,7 @@ static const svc_fdir_policy_t k_policy[QIRAN_FAULT_COUNT] = {
     /* WATCHDOG_EXPIRY         */ { QIRAN_SEV_SEVERE,   QIRAN_ESCALATE_REPORT,       0U },
     /* MEMORY                  */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_POWER_RESET,  3U },
     /* CONFIG                  */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       3U },
-    /* STATE_TRANSITION        */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       3U },
-    /* STATE_TIMEOUT           */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       3U },
+    /* STAGE_TIMEOUT           */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       3U },
     /* PRECOND                 */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT, STAGE_RETRY },
     /* CONTROL_LOOP            */ { QIRAN_SEV_CRITICAL, QIRAN_ESCALATE_REPORT,       5U },
 
@@ -290,7 +289,7 @@ static void collect_platform_counters(void)
     }
 }
 
-static void drain_interrupt_faults(void)
+void svc_fdir_service_interrupts(void)
 {
     plat_irq_event_t ev;
 
@@ -307,7 +306,6 @@ void error_handling_service(void)
 {
     uint32_t i;
 
-    drain_interrupt_faults();
     collect_platform_counters();
 
     for (i = 1U; i < (uint32_t)QIRAN_FAULT_COUNT; i++) {

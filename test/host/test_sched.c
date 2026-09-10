@@ -31,7 +31,7 @@ static void test_task_table_shape(void)
 
     TEST_CASE("every task is named, and the loop's seven run every minor cycle");
 
-    CHECK_EQ_U64(EXEC_TASK_COUNT, 8U);
+    CHECK_EQ_U64(EXEC_TASK_COUNT, 11U);
 
     for (i = 0U; i < (uint32_t)EXEC_TASK_COUNT; i++) {
         const exec_task_def_t *def = exec_task_def((exec_task_id_t)i);
@@ -40,10 +40,12 @@ static void test_task_table_shape(void)
         CHECK_TRUE(def->name != NULL);
     }
 
-    for (i = 0U; i < (uint32_t)EXEC_TASK_MAJOR; i++) {
-        CHECK_EQ_U64(exec_task_def((exec_task_id_t)i)->cycle, EXEC_CYCLE_MINOR);
+    for (i = 0U; i < (uint32_t)EXEC_TASK_COUNT; i++) {
+        exec_cycle_class_t cls = exec_task_def((exec_task_id_t)i)->cycle;
+
+        CHECK_TRUE((i == (uint32_t)EXEC_TASK_MAJOR)
+                   ? (cls == EXEC_CYCLE_MAJOR) : (cls == EXEC_CYCLE_MINOR));
     }
-    CHECK_EQ_U64(exec_task_def(EXEC_TASK_MAJOR)->cycle, EXEC_CYCLE_MAJOR);
 
     CHECK_TRUE(exec_task_def(EXEC_TASK_COUNT) == NULL);
 }
@@ -55,35 +57,35 @@ static void test_measurement(void)
     TEST_CASE("a task's execution time is measured, and the peak retained");
     exec_sched_init();
 
-    exec_task_stat_get(EXEC_TASK_HEALTH, &st);
+    exec_task_stat_get(EXEC_TASK_HEALTH_CHECK, &st);
     CHECK_EQ_U64(st.runs, 0U);
     CHECK_EQ_U64(st.cycles_worst, 0U);
-    CHECK_EQ_U64(exec_task_mean_cycles(EXEC_TASK_HEALTH), 0U);
+    CHECK_EQ_U64(exec_task_mean_cycles(EXEC_TASK_HEALTH_CHECK), 0U);
 
-    EXEC_RUN(EXEC_TASK_HEALTH, burn(50000U));
-    exec_task_stat_get(EXEC_TASK_HEALTH, &st);
+    EXEC_RUN(EXEC_TASK_HEALTH_CHECK, burn(50000U));
+    exec_task_stat_get(EXEC_TASK_HEALTH_CHECK, &st);
     CHECK_EQ_U64(st.runs, 1U);
     CHECK_TRUE(st.cycles_last > 0U);
     CHECK_EQ_U64(st.cycles_worst, st.cycles_last);
 
     TEST_CASE("a longer run raises the peak, a shorter one does not lower it");
-    EXEC_RUN(EXEC_TASK_HEALTH, burn(200000U));
-    exec_task_stat_get(EXEC_TASK_HEALTH, &st);
+    EXEC_RUN(EXEC_TASK_HEALTH_CHECK, burn(200000U));
+    exec_task_stat_get(EXEC_TASK_HEALTH_CHECK, &st);
     CHECK_EQ_U64(st.runs, 2U);
     CHECK_TRUE(st.cycles_worst >= st.cycles_last);
 
     {
         uint32_t peak = st.cycles_worst;
 
-        EXEC_RUN(EXEC_TASK_HEALTH, burn(10U));
-        exec_task_stat_get(EXEC_TASK_HEALTH, &st);
+        EXEC_RUN(EXEC_TASK_HEALTH_CHECK, burn(10U));
+        exec_task_stat_get(EXEC_TASK_HEALTH_CHECK, &st);
         CHECK_EQ_U64(st.cycles_worst, peak);
         CHECK_EQ_U64(st.runs, 3U);
     }
 
     TEST_CASE("the mean sits between the shortest and the longest run");
-    CHECK_TRUE(exec_task_mean_cycles(EXEC_TASK_HEALTH) <= st.cycles_worst);
-    CHECK_TRUE(exec_task_mean_cycles(EXEC_TASK_HEALTH) > 0U);
+    CHECK_TRUE(exec_task_mean_cycles(EXEC_TASK_HEALTH_CHECK) <= st.cycles_worst);
+    CHECK_TRUE(exec_task_mean_cycles(EXEC_TASK_HEALTH_CHECK) > 0U);
 
     TEST_CASE("measuring one task does not disturb another");
     exec_task_stat_get(EXEC_TASK_COMMS, &st);
@@ -103,7 +105,7 @@ static void test_due_by_class(void)
     TEST_CASE("tasks due every minor cycle are due in every slot");
     for (slot = 0U; slot < QIRAN_MINOR_PER_MAJOR; slot++) {
         tick_to_slot(slot);
-        CHECK_TRUE(exec_task_due(EXEC_TASK_STATE_MACHINE));
+        CHECK_TRUE(exec_task_due(EXEC_TASK_INTERRUPTS));
         CHECK_TRUE(exec_task_due(EXEC_TASK_FDIR));
 
         if (exec_task_due(EXEC_TASK_MAJOR)) {
@@ -216,17 +218,18 @@ static void test_check_reports_completeness(void)
 
     TEST_CASE("the worst slot is slot zero, where the major task also runs");
     exec_sched_init();
-    for (i = 0U; i < (uint32_t)EXEC_TASK_MAJOR; i++) {
+    for (i = 0U; i < (uint32_t)EXEC_TASK_COUNT; i++) {
         s_stat[i].cycles_worst = 1000U;
         s_stat[i].runs = 1U;
     }
     s_stat[EXEC_TASK_MAJOR].cycles_worst = 5000U;
-    s_stat[EXEC_TASK_MAJOR].runs = 1U;
 
     exec_sched_check(&chk);
     CHECK_TRUE(chk.complete);
     CHECK_EQ_U64(chk.worst_slot, 0U);
-    CHECK_EQ_U64(chk.worst_slot_cycles, (7U * 1000U) + 5000U);
+    /* Every minor-cycle task, plus the major task in the slot it falls on. */
+    CHECK_EQ_U64(chk.worst_slot_cycles,
+                 (((uint32_t)EXEC_TASK_COUNT - 1U) * 1000U) + 5000U);
 
     TEST_CASE("one unrun every-cycle task is enough to report incomplete");
     s_stat[EXEC_TASK_COMMS].runs = 0U;

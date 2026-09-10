@@ -1,7 +1,7 @@
 #include "qiran/comm/comm_bytes.h"
 #include "qiran/comm/comm_rs485_hk.h"
 #include "qiran/exec/exec_core.h"
-#include "qiran/mission/mission_state.h"
+#include "qiran/mission/mission_seq.h"
 #include "qiran/plat/plat_cpu.h"
 #include "qiran/plat/plat_irq.h"
 #include "qiran/svc/svc_config.h"
@@ -113,7 +113,7 @@ static void setup(bool with_link)
     svc_fdir_init();
     svc_config_init();
     svc_time_init();
-    mission_state_init();
+    mission_seq_init();
     svc_health_init();
     (void)svc_watchdog_init(NULL);
     comm_rs485_hk_init();
@@ -345,31 +345,37 @@ static void test_status_frame(void)
 
 static void test_period_is_honoured(void)
 {
-    TEST_CASE("the first service sends immediately");
+    TEST_CASE("the first pass stages and sends immediately");
     setup(true);
-    comm_rs485_hk_service();
+    comm_rs485_hk_stage();
+    comm_rs485_hk_transmit();
     CHECK_EQ_U64(comm_rs485_hk_frames_sent(), 1U);
     CHECK_EQ_U64(s_link_len, COMM_HK_FRAME_BYTES);
     CHECK_EQ_U64(s_link[OFF_ID], COMM_HK_PACKET_ID);
 
-    TEST_CASE("it does not send again before its interval has elapsed");
-    comm_rs485_hk_service();
-    comm_rs485_hk_service();
+    TEST_CASE("nothing further is staged before the interval has elapsed");
+    comm_rs485_hk_stage();
+    comm_rs485_hk_transmit();
+    comm_rs485_hk_stage();
+    comm_rs485_hk_transmit();
     CHECK_EQ_U64(comm_rs485_hk_frames_sent(), 1U);
 
     tick(49U);   /* 980 ms of a 1000 ms interval */
-    comm_rs485_hk_service();
+    comm_rs485_hk_stage();
+    comm_rs485_hk_transmit();
     CHECK_EQ_U64(comm_rs485_hk_frames_sent(), 1U);
 
     TEST_CASE("it sends once the interval has elapsed");
     tick(1U);
-    comm_rs485_hk_service();
+    comm_rs485_hk_stage();
+    comm_rs485_hk_transmit();
     CHECK_EQ_U64(comm_rs485_hk_frames_sent(), 2U);
 
     TEST_CASE("shortening the interval is picked up");
     CHECK_TRUE(svc_config_set(CFG_HK_PERIOD_MS, 100U) == QIRAN_OK);
     tick(5U);
-    comm_rs485_hk_service();
+    comm_rs485_hk_stage();
+    comm_rs485_hk_transmit();
     CHECK_EQ_U64(comm_rs485_hk_frames_sent(), 3U);
 }
 
@@ -378,7 +384,8 @@ static void test_transmit_failures(void)
     TEST_CASE("with no link the frame is not counted as sent, and is reported");
     setup(false);
     CHECK_TRUE(!comm_rs485_hk_ready());
-    comm_rs485_hk_service();
+    comm_rs485_hk_stage();
+    comm_rs485_hk_transmit();
     CHECK_EQ_U64(comm_rs485_hk_frames_sent(), 0U);
     CHECK_EQ_U64(comm_rs485_hk_transmit_failures(), 1U);
     error_handling_service();
@@ -388,7 +395,8 @@ static void test_transmit_failures(void)
     setup(true);
     CHECK_TRUE(comm_rs485_hk_ready());
     s_tx_result = QIRAN_ERR_HARDWARE;
-    comm_rs485_hk_service();
+    comm_rs485_hk_stage();
+    comm_rs485_hk_transmit();
     CHECK_EQ_U64(s_tx_calls, 1U);
     CHECK_EQ_U64(comm_rs485_hk_frames_sent(), 0U);
     CHECK_EQ_U64(comm_rs485_hk_transmit_failures(), 1U);
@@ -398,7 +406,8 @@ static void test_transmit_failures(void)
         uint32_t i;
         for (i = 0U; i < 10U; i++) {
             tick(51U);
-            comm_rs485_hk_service();
+            comm_rs485_hk_stage();
+    comm_rs485_hk_transmit();
             error_handling_service();
         }
     }
